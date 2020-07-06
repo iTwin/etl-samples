@@ -2,9 +2,8 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import * as path from "path";
+import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs } from "@bentley/imodeljs-backend";
 import { CodeSpec } from "@bentley/imodeljs-common";
-import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, SnapshotDb } from "@bentley/imodeljs-backend";
 
 /** CodeExporter creates a CSV output file containing all Codes from the specified iModel. */
 export class CodeExporter extends IModelExportHandler {

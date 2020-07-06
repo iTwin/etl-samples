@@ -2,9 +2,8 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { assert } from "chai";
 import * as path from "path";
-import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, SnapshotDb, IModelHost } from "@bentley/imodeljs-backend";
+import { IModelHost, IModelJsFs as fs, SnapshotDb } from "@bentley/imodeljs-backend";
 import { CodeExporter } from "../CodeExporter";
 
 describe("CodeExporter", () => {
