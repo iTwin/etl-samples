@@ -2,12 +2,11 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { IModelHost, SnapshotDb, SpatialCategory } from "@bentley/imodeljs-backend";
-import { CodeExporter } from "../CodeExporter";
+import { BisCoreSchema, GenericSchema, IModelHost, SnapshotDb } from "@bentley/imodeljs-backend";
+import { TurtleExporter } from "../TurtleExporter";
 import { TestUtils } from "./TestUtils";
-import { IModel } from "@bentley/imodeljs-common";
 
-describe("CodeExporter", () => {
+describe("TurtleExporter", () => {
   before(async () => {
     await IModelHost.startup();
   });
@@ -16,13 +15,16 @@ describe("CodeExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it("exportCodes", () => {
-    const outputFileName = TestUtils.initOutputFile("test.bim.codes.csv");
-    const iModelFileName = TestUtils.initOutputFile("test.bim");
+  it("export", () => {
+    const outputFileName = TestUtils.initOutputFile("turtle.txt");
+    const iModelFileName = TestUtils.initOutputFile("turtle-test.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "Test" }, createClassViews: true });
-    SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory1", {});
-    SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory2", {});
-    CodeExporter.exportCodes(iModelDb, outputFileName);
+    const schemasNames = [BisCoreSchema.schemaName, GenericSchema.schemaName];
+    const writer = new TurtleExporter(iModelDb, outputFileName);
+    for (const schemaName of schemasNames) {
+      const schema = writer.schemaLoader.getSchema(schemaName);
+      writer.writeSchema(schema);
+    }
     iModelDb.close();
   });
 });

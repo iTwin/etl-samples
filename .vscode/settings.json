@@ -1,11 +1,13 @@
 {
   "cSpell.words": [
+    "Struct",
     "bentleyjs",
     "betools",
     "ecschema",
     "imodelhub",
     "imodeljs",
-    "itwin"
+    "itwin",
+    "rdfs"
   ],
   "importSorter.importStringConfiguration.quoteMark": "double",
   "importSorter.generalConfiguration.sortImportsInDirectory": false,
