@@ -11,6 +11,10 @@ describe("CodeExporter", () => {
     IModelHost.startup();
   });
 
+  after(async () => {
+    IModelHost.shutdown();
+  });
+
   it("exportCodes", () => {
     const outputDirName = path.join(__dirname, "output");
     const outputFileName = path.join(outputDirName, "test.bim.codes.csv");
@@ -18,6 +22,9 @@ describe("CodeExporter", () => {
       fs.mkdirSync(outputDirName);
     }
     const iModelFileName = path.join(__dirname, "snapshot.bim");
+    if (fs.existsSync(iModelFileName)) {
+      fs.removeSync(iModelFileName);
+    }
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "Test" }, createClassViews: true });
     CodeExporter.exportCodes(iModelDb, outputFileName);
     iModelDb.close();
