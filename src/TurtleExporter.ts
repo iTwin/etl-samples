@@ -124,12 +124,8 @@ export class TurtleExporter {
   }
   public writeClass(c: ECClass): void {
     const classRdfName = this.formatClass(c);
-    this.writeClassType(classRdfName, c);
+    this.writeSubClassOfClass(classRdfName, c);
     this.writeTriple(classRdfName, rdfs.label, `"${c.label ?? c.name}"`);
-    const baseClass: ECClass | undefined = c.getBaseClassSync();
-    if (baseClass) {
-      this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatClass(baseClass)}`);
-    }
     if (c.description) {
       this.writeTriple(classRdfName, rdfs.comment, `"${c.description}"`);
     }
@@ -139,25 +135,30 @@ export class TurtleExporter {
       }
     }
   }
-  private writeClassType(classRdfName: string, c: ECClass): void {
-    switch (c.schemaItemType) {
-      case SchemaItemType.CustomAttributeClass:
-        this.writeTriple(classRdfName, rdf.type, ec.CustomAttributeClass);
-        break;
-      case SchemaItemType.EntityClass:
-        this.writeTriple(classRdfName, rdf.type, ec.EntityClass);
-        break;
-      case SchemaItemType.Enumeration:
-        this.writeTriple(classRdfName, rdf.type, ec.Enumeration);
-        break;
-      case SchemaItemType.Mixin:
-        this.writeTriple(classRdfName, rdf.type, ec.Mixin);
-        break;
-      case SchemaItemType.RelationshipClass:
-        this.writeTriple(classRdfName, rdf.type, ec.RelationshipClass);
-        break;
-      default:
-        throw new Error("Unexpected class type");
+  private writeSubClassOfClass(classRdfName: string, c: ECClass): void {
+    const baseClass: ECClass | undefined = c.getBaseClassSync();
+    if (baseClass) {
+      this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatClass(baseClass)}`);
+    } else {
+      switch (c.schemaItemType) {
+        case SchemaItemType.CustomAttributeClass:
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.CustomAttributeClass);
+          break;
+        case SchemaItemType.EntityClass:
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.EntityClass);
+          break;
+        case SchemaItemType.Enumeration:
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.Enumeration);
+          break;
+        case SchemaItemType.Mixin:
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.Mixin);
+          break;
+        case SchemaItemType.RelationshipClass:
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.RelationshipClass);
+          break;
+        default:
+          throw new Error("Unexpected class type");
+      }
     }
   }
   public formatClass(c: ECClass): string {
@@ -171,30 +172,30 @@ export class TurtleExporter {
   public writeProperty(classRdfName: string, property: Property): void {
     const propertyRdfName = `${classRdfName}-${property.name}`;
     this.writeTriple(propertyRdfName, rdfs.domain, classRdfName);
-    this.writePropertyType(propertyRdfName, property);
+    this.writeSubClassOfProperty(propertyRdfName, property);
     this.writeTriple(propertyRdfName, rdfs.label, `"${property.label ?? property.name}"`);
     if (property.description) {
       this.writeTriple(propertyRdfName, rdfs.comment, `"${property.description}"`);
     }
   }
-  private writePropertyType(propertyRdfName: string, property: Property): void {
+  private writeSubClassOfProperty(propertyRdfName: string, property: Property): void {
     if (property.isArray()) {
-      this.writeTriple(propertyRdfName, rdf.type, property.isPrimitive() ? ec.PrimitiveArrayProperty : ec.StructArrayProperty);
+      this.writeTriple(propertyRdfName, rdfs.subClassOf, property.isPrimitive() ? ec.PrimitiveArrayProperty : ec.StructArrayProperty);
     } else {
       if (property.isEnumeration()) {
-        this.writeTriple(propertyRdfName, rdf.type, ec.PrimitiveProperty);
+        this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.PrimitiveProperty);
         if (property.enumeration?.fullName) {
           this.writeTriple(propertyRdfName, rdfs.range, this.formatClassFullName(property.enumeration.fullName));
         } else {
           this.writePrimitiveType(propertyRdfName, PropertyTypeUtils.getPrimitiveType(property.propertyType));
         }
       } else if (property.isNavigation()) {
-        this.writeTriple(propertyRdfName, rdf.type, ec.NavigationProperty);
+        this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.NavigationProperty);
         this.writeTriple(propertyRdfName, rdfs.range, this.formatClassFullName(property.relationshipClass.fullName));
       } else if (property.isStruct()) {
-        this.writeTriple(propertyRdfName, rdf.type, ec.StructProperty);
+        this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.StructProperty);
       } else if (property.isPrimitive()) {
-        this.writeTriple(propertyRdfName, rdf.type, ec.PrimitiveProperty);
+        this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.PrimitiveProperty);
         this.writePrimitiveType(propertyRdfName, PropertyTypeUtils.getPrimitiveType(property.propertyType));
       }
     }
