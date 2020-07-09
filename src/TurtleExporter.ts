@@ -2,7 +2,9 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { ECClass, PrimitiveType, Property, PropertyTypeUtils, Schema, SchemaItemType } from "@bentley/ecschema-metadata";
+import {
+  ECClass, Enumeration, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, Schema, SchemaItem, SchemaItemType,
+} from "@bentley/ecschema-metadata";
 import { IModelDb, IModelJsFs as fs } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader";
 
@@ -52,8 +54,11 @@ enum xsd {
 enum ec {
   prefix = "ec",
   iri = "http://www.example.org/ec#",
+  Class = "ec:Class",
   EntityClass = "ec:EntityClass",
   RelationshipClass = "ec:RelationshipClass",
+  LinkTableRelationshipClass = "ec:LinkTableRelationshipClass",
+  NavigationRelationshipClass = "ec:NavigationRelationshipClass",
   CustomAttributeClass = "ec:CustomAttributeClass",
   Enumeration = "ec:Enumeration",
   IGeometry = "ec:IGeometry",
@@ -63,8 +68,13 @@ enum ec {
   PrimitiveArrayProperty = "ec:PrimitiveArrayProperty",
   StructArrayProperty = "ec:StructArrayProperty",
   NavigationProperty = "ec:NavigationProperty",
+  BackingRelationship = "ec:BackingRelationship",
   Point2d = "ec:Point2d",
   Point3d = "ec:Point3d",
+  ExtendedType = "ec:ExtendedType",
+  Id64String = "ec:Id64String",
+  JsonString = "ec:JsonString",
+  GuidString = "ec:GuidString",
 }
 
 /** Exports iModel data to the Terse RDF Triple Language file format.
@@ -106,28 +116,74 @@ export class TurtleExporter {
     this.writePrefix(ec.prefix, ec.iri);
   }
   private writeEcTypes(): void {
-    this.writeTriple(ec.EntityClass, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.RelationshipClass, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
+    this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class); // NOTE: an ec:Enumeration is not an ec:Class, but is an rdfs:Class
+    this.writeLabel(ec.Enumeration);
+    this.writeTriple(ec.Class, rdfs.subClassOf, rdfs.Class);
+    this.writeLabel(ec.Class);
+    this.writeTriple(ec.EntityClass, rdfs.subClassOf, ec.Class);
+    this.writeLabel(ec.EntityClass);
+    this.writeEcIdProperty(ec.EntityClass, "Id", "The ECInstanceId for the entity instance");
+    this.writeTriple(ec.RelationshipClass, rdfs.subClassOf, ec.Class);
+    this.writeLabel(ec.RelationshipClass);
+    this.writeTriple(ec.LinkTableRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
+    this.writeLabel(ec.LinkTableRelationshipClass);
+    this.writeEcIdProperty(ec.LinkTableRelationshipClass, "Id", "The ECInstanceId of the relationship");
+    this.writeEcIdProperty(ec.LinkTableRelationshipClass, "SourceId", "The SourceECInstanceId or *source* of the relationship");
+    this.writeEcIdProperty(ec.LinkTableRelationshipClass, "TargetId", "The TargetECInstanceId or *target* of the relationship");
+    this.writeTriple(ec.NavigationRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
+    this.writeLabel(ec.NavigationRelationshipClass);
+    this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
+    this.writeLabel(ec.CustomAttributeClass);
     this.writeTriple(ec.PrimitiveProperty, rdfs.subClassOf, rdf.Property);
+    this.writeLabel(ec.PrimitiveProperty);
     this.writeTriple(ec.PrimitiveArrayProperty, rdfs.subClassOf, rdf.Property);
+    this.writeLabel(ec.PrimitiveArrayProperty);
     this.writeTriple(ec.StructProperty, rdfs.subClassOf, rdf.Property);
+    this.writeLabel(ec.StructProperty);
     this.writeTriple(ec.StructArrayProperty, rdfs.subClassOf, rdf.Property);
+    this.writeLabel(ec.StructArrayProperty);
     this.writeTriple(ec.NavigationProperty, rdfs.subClassOf, rdf.Property);
+    this.writeLabel(ec.NavigationProperty);
+    this.writeLabel(ec.Id64String);
+    this.writeLabel(ec.JsonString);
+    this.writeLabel(ec.GuidString);
+    this.writeLabel(ec.Point2d);
+    this.writeLabel(ec.Point3d);
+  }
+  private writeEcIdProperty(rdfName: string, idName: string, comment?: string): void {
+    this.writeTriple(`${rdfName}-${idName}`, rdfs.subClassOf, ec.PrimitiveProperty);
+    this.writeTriple(`${rdfName}-${idName}`, rdfs.domain, rdfName);
+    this.writeTriple(`${rdfName}-${idName}`, rdfs.range, xsd.string);
+    this.writeTriple(`${rdfName}-${idName}`, rdfs.range, ec.Id64String);
+    this.writeLabel(`${rdfName}-${idName}`, `${rdfName}.${idName}`);
+    if (comment) {
+      this.writeComment(rdfName, comment);
+    }
+  }
+  public writeLabel(rdfName: string, label: string = rdfName): void {
+    this.writeTriple(rdfName, rdfs.label, `"${label}"`);
+  }
+  public writeComment(rdfName: string, comment: string): void {
+    this.writeTriple(rdfName, rdfs.comment, `"${comment}"`);
   }
   public writeSchema(schema: Schema): void {
     this.writePrefix(schema.alias, `http://www.example.org/schemas/${schema.schemaKey}#`);
-    for (const c of schema.getClasses()) {
-      this.writeClass(c);
+    for (const item of schema.getItems()) {
+      if (item instanceof ECClass) {
+        this.writeClass(item);
+      } else if (SchemaItemType.Enumeration === item.schemaItemType) {
+        const enumerationRdfName = this.formatSchemaItem(item);
+        this.writeTriple(enumerationRdfName, rdfs.subClassOf, ec.Enumeration);
+        this.writeLabel(enumerationRdfName);
+      }
     }
   }
   public writeClass(c: ECClass): void {
-    const classRdfName = this.formatClass(c);
-    this.writeSubClassOfClass(classRdfName, c);
-    this.writeTriple(classRdfName, rdfs.label, `"${c.label ?? c.name}"`);
+    const classRdfName = this.formatSchemaItem(c);
+    this.writeClassSubClassOf(classRdfName, c);
+    this.writeLabel(classRdfName, `${c.schema.alias}:${c.name}`);
     if (c.description) {
-      this.writeTriple(classRdfName, rdfs.comment, `"${c.description}"`);
+      this.writeComment(classRdfName, c.description);
     }
     if (c.properties) {
       for (const property of c.properties) {
@@ -135,10 +191,10 @@ export class TurtleExporter {
       }
     }
   }
-  private writeSubClassOfClass(classRdfName: string, c: ECClass): void {
+  private writeClassSubClassOf(classRdfName: string, c: ECClass): void {
     const baseClass: ECClass | undefined = c.getBaseClassSync();
     if (baseClass) {
-      this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatClass(baseClass)}`);
+      this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatSchemaItem(baseClass)}`);
     } else {
       switch (c.schemaItemType) {
         case SchemaItemType.CustomAttributeClass:
@@ -154,56 +210,75 @@ export class TurtleExporter {
           this.writeTriple(classRdfName, rdfs.subClassOf, ec.Mixin);
           break;
         case SchemaItemType.RelationshipClass:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.RelationshipClass);
+          if (c.getCustomAttributesSync().has("ECDbMap.LinkTableRelationshipMap")) {
+            this.writeTriple(classRdfName, rdfs.subClassOf, ec.LinkTableRelationshipClass);
+          } else {
+            this.writeTriple(classRdfName, rdfs.subClassOf, ec.NavigationRelationshipClass);
+          }
           break;
         default:
           throw new Error("Unexpected class type");
       }
     }
   }
-  public formatClass(c: ECClass): string {
-    return `${c.schema.alias}:${c.name}`;
+  public formatSchemaItem(schemaItem: SchemaItem): string {
+    return `${schemaItem.schema.alias}:${schemaItem.name}`;
   }
-  public formatClassFullName(classFullName: string): string {
-    const classNameParts: string[] = classFullName.replace(".", ":").split(":");
-    const schema = this.schemaLoader.getSchema(classNameParts[0]);
-    return this.formatClass(schema.getItemSync<ECClass>(classNameParts[1])!);
+  public formatSchemaItemFullName(fullName: string): string {
+    const nameParts: string[] = fullName.replace(".", ":").split(":");
+    const schema = this.schemaLoader.getSchema(nameParts[0]);
+    return this.formatSchemaItem(schema.getItemSync(nameParts[1])!);
   }
   public writeProperty(classRdfName: string, property: Property): void {
     const propertyRdfName = `${classRdfName}-${property.name}`;
     this.writeTriple(propertyRdfName, rdfs.domain, classRdfName);
-    this.writeSubClassOfProperty(propertyRdfName, property);
-    this.writeTriple(propertyRdfName, rdfs.label, `"${property.label ?? property.name}"`);
+    this.writePropertySubClassOf(propertyRdfName, property);
+    this.writeLabel(propertyRdfName, `${property.schema.alias}:${property.class.name}.${property.name}`);
     if (property.description) {
-      this.writeTriple(propertyRdfName, rdfs.comment, `"${property.description}"`);
+      this.writeComment(propertyRdfName, property.description);
     }
   }
-  private writeSubClassOfProperty(propertyRdfName: string, property: Property): void {
+  private writePropertySubClassOf(propertyRdfName: string, property: Property): void {
     if (property.isArray()) {
       this.writeTriple(propertyRdfName, rdfs.subClassOf, property.isPrimitive() ? ec.PrimitiveArrayProperty : ec.StructArrayProperty);
     } else {
       if (property.isEnumeration()) {
         this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.PrimitiveProperty);
         if (property.enumeration?.fullName) {
-          this.writeTriple(propertyRdfName, rdfs.range, this.formatClassFullName(property.enumeration.fullName));
-        } else {
-          this.writePrimitiveType(propertyRdfName, PropertyTypeUtils.getPrimitiveType(property.propertyType));
+          this.writeTriple(propertyRdfName, rdfs.range, this.formatSchemaItemFullName(property.enumeration.fullName));
+        } else if (property.isPrimitive()) {
+          this.writePrimitiveType(propertyRdfName, property);
         }
       } else if (property.isNavigation()) {
         this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.NavigationProperty);
-        this.writeTriple(propertyRdfName, rdfs.range, this.formatClassFullName(property.relationshipClass.fullName));
+        this.writeTriple(propertyRdfName, rdfs.range, xsd.string);
+        this.writeTriple(propertyRdfName, rdfs.range, ec.Id64String);
+        this.writeTriple(propertyRdfName, ec.BackingRelationship, this.formatSchemaItemFullName(property.relationshipClass.fullName));
       } else if (property.isStruct()) {
         this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.StructProperty);
       } else if (property.isPrimitive()) {
-        this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.PrimitiveProperty);
-        this.writePrimitiveType(propertyRdfName, PropertyTypeUtils.getPrimitiveType(property.propertyType));
+        this.writePrimitiveType(propertyRdfName, property);
       }
     }
   }
-  private writePrimitiveType(propertyRdfName: string, primitiveType: PrimitiveType): void {
-    switch (primitiveType) { // see https://www.w3.org/TR/rdf11-concepts/#dfn-rdf-compatible-xsd-types
+  private writePrimitiveType(propertyRdfName: string, property: PrimitiveProperty): void {
+    this.writeTriple(propertyRdfName, rdfs.subClassOf, ec.PrimitiveProperty);
+    const primitiveType: PrimitiveType = PropertyTypeUtils.getPrimitiveType(property.propertyType);
+    switch (primitiveType) {
       case PrimitiveType.Binary:
-        this.writeTriple(propertyRdfName, rdfs.range, xsd.base64Binary);
+        if (property.extendedTypeName) {
+          switch (property.extendedTypeName.toLocaleLowerCase()) {
+            case "beguid": // cspell:ignore BeGuid
+              this.writeTriple(propertyRdfName, rdfs.range, xsd.string);
+              this.writeTriple(propertyRdfName, rdfs.range, ec.GuidString);
+              break;
+            default:
+              this.writeTriple(propertyRdfName, rdfs.range, xsd.base64Binary);
+              break;
+          }
+        } else {
+          this.writeTriple(propertyRdfName, rdfs.range, xsd.base64Binary);
+        }
         break;
       case PrimitiveType.Boolean:
         this.writeTriple(propertyRdfName, rdfs.range, xsd.boolean);
@@ -231,7 +306,16 @@ export class TurtleExporter {
         break;
       case PrimitiveType.String:
         this.writeTriple(propertyRdfName, rdfs.range, xsd.string);
+        if (property.extendedTypeName) {
+          switch (property.extendedTypeName.toLocaleLowerCase()) {
+            case "json":
+              this.writeTriple(propertyRdfName, rdfs.range, ec.JsonString);
+              break;
+          }
+        }
         break;
+      default:
+        throw new Error("Unexpected PrimitiveType");
     }
   }
 }
