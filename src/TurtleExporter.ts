@@ -16,6 +16,7 @@ enum rdf {
   iri = "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
   type = "rdf:type",
   Property = "rdf:Property",
+  List = "rdf:List",
 }
 
 /** Enumeration of RDF Schema (RDFS) types.
@@ -215,9 +216,9 @@ export class TurtleExporter {
   public writeProperty(classRdfName: string, property: Property): void {
     if (property.isArray()) {
       if (property.isPrimitive()) {
-        this.writePropertyTriples(classRdfName, property.name, ec.PrimitiveArrayProperty, undefined, property.description);
+        this.writePropertyTriples(classRdfName, property.name, ec.PrimitiveArrayProperty, rdf.List, property.description);
       } else {
-        this.writePropertyTriples(classRdfName, property.name, ec.StructArrayProperty, undefined, property.description);
+        this.writePropertyTriples(classRdfName, property.name, ec.StructArrayProperty, rdf.List, property.description);
       }
     } else {
       if (property.isEnumeration()) {
