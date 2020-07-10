@@ -122,8 +122,8 @@ export class TurtleExporter {
     this.writeTriple(ec.LinkTableRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
     this.writeTriple(ec.NavigationRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
     this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
+    this.writeTriple(ec.Mixin, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.Mixin, rdfs.subClassOf, rdfs.Class);
     this.writeTriple(ec.Point2d, rdfs.subClassOf, rdfs.Class);
     this.writeTriple(ec.Point3d, rdfs.subClassOf, rdfs.Class);
     // rdf.Property types

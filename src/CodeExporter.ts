@@ -3,19 +3,31 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { Id64String } from "@bentley/bentleyjs-core";
-import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs } from "@bentley/imodeljs-backend";
+import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs } from "@bentley/imodeljs-backend";
 import { CodeSpec, IModel } from "@bentley/imodeljs-common";
 
 /** CodeExporter creates a CSV output file containing all Codes from the specified iModel. */
 export class CodeExporter extends IModelExportHandler {
   public outputFileName: string;
+  public iModelExporter: IModelExporter;
+
+  /** Construct a new CodeExporter */
+  public constructor(sourceDb: IModelDb, outputFileName: string) {
+    super();
+    if (IModelJsFs.existsSync(outputFileName)) {
+      IModelJsFs.removeSync(outputFileName);
+    }
+    this.outputFileName = outputFileName;
+    this.iModelExporter = new IModelExporter(sourceDb);
+    this.iModelExporter.registerHandler(this);
+    this.iModelExporter.wantGeometry = false;
+    this.writeFileHeader();
+  }
 
   /** Initiate the export of codes. */
   public static exportCodes(iModelDb: IModelDb, outputFileName: string): void {
-    const exporter = new IModelExporter(iModelDb);
-    const exportHandler = new CodeExporter(outputFileName);
-    exporter.registerHandler(exportHandler);
-    exporter.exportAll();
+    const handler = new CodeExporter(iModelDb, outputFileName);
+    handler.iModelExporter.exportAll();
   }
 
   /** Override of IModelExportHandler.onExportElement that outputs a line of a CSV file when the Element has a Code. */
@@ -42,16 +54,6 @@ export class CodeExporter extends IModelExportHandler {
     return `${this.buildCodeScopePath(scopeElement)}${codeScopePart}/`;
   }
 
-  /** Construct a new CodeExporter */
-  private constructor(outputFileName: string) {
-    super();
-    if (fs.existsSync(outputFileName)) {
-      fs.removeSync(outputFileName);
-    }
-    this.outputFileName = outputFileName;
-    this.writeFileHeader();
-  }
-
   /** Write header line into CSV file. */
   private writeFileHeader(): void {
     this.writeLine("ElementId", "CodeSpecName", "CodeScopePath", "CodeValue");
@@ -59,6 +61,6 @@ export class CodeExporter extends IModelExportHandler {
 
   /** Write a line into the CSV file. */
   private writeLine(elementId: Id64String, codeSpecName: string, codeScopePath: string, codeValue: string): void {
-    fs.appendFileSync(this.outputFileName, `${elementId}, ${codeSpecName}, ${codeScopePath}, ${codeValue}\n`);
+    IModelJsFs.appendFileSync(this.outputFileName, `${elementId}, ${codeSpecName}, ${codeScopePath}, ${codeValue}\n`);
   }
 }
