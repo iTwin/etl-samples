@@ -3,7 +3,7 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import {
-  ECClass, Enumeration, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, Schema, SchemaItem, SchemaItemType,
+  ECClass, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, Schema, SchemaItem, SchemaItemType,
 } from "@bentley/ecschema-metadata";
 import { IModelDb, IModelJsFs as fs } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader";
@@ -26,6 +26,7 @@ enum rdfs {
   iri = "http://www.w3.org/2000/01/rdf-schema#",
   Class = "rdfs:Class",
   subClassOf = "rdfs:subClassOf",
+  Literal = "rdfs:Literal",
   label = "rdfs:label",
   comment = "rdfs:comment",
   range = "rdfs:range",
@@ -63,6 +64,7 @@ enum ec {
   Enumeration = "ec:Enumeration",
   IGeometry = "ec:IGeometry",
   Mixin = "ec:Mixin",
+  Property = "ec:Property",
   PrimitiveProperty = "ec:PrimitiveProperty",
   StructProperty = "ec:StructProperty",
   PrimitiveArrayProperty = "ec:PrimitiveArrayProperty",
@@ -94,7 +96,6 @@ export class TurtleExporter {
     this.writeRdfPrefix();
     this.writeRdfsPrefix();
     this.writeXsdPrefix();
-    this.writeEcPrefix();
     this.writeEcTypes();
   }
   public writeTriple(subject: string, predicate: string, object: any): void {
@@ -112,48 +113,40 @@ export class TurtleExporter {
   private writeXsdPrefix(): void {
     this.writePrefix(xsd.prefix, xsd.iri);
   }
-  private writeEcPrefix(): void {
-    this.writePrefix(ec.prefix, ec.iri);
-  }
   private writeEcTypes(): void {
-    this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class); // NOTE: an ec:Enumeration is not an ec:Class, but is an rdfs:Class
-    this.writeLabel(ec.Enumeration);
+    this.writePrefix(ec.prefix, ec.iri);
+    // rdfs:Class types
     this.writeTriple(ec.Class, rdfs.subClassOf, rdfs.Class);
-    this.writeLabel(ec.Class);
     this.writeTriple(ec.EntityClass, rdfs.subClassOf, ec.Class);
-    this.writeLabel(ec.EntityClass);
-    this.writeEcIdProperty(ec.EntityClass, "Id", "The ECInstanceId for the entity instance");
     this.writeTriple(ec.RelationshipClass, rdfs.subClassOf, ec.Class);
-    this.writeLabel(ec.RelationshipClass);
     this.writeTriple(ec.LinkTableRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
-    this.writeLabel(ec.LinkTableRelationshipClass);
+    this.writeTriple(ec.NavigationRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
+    this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
+    this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
+    this.writeTriple(ec.Mixin, rdfs.subClassOf, rdfs.Class);
+    this.writeTriple(ec.Point2d, rdfs.subClassOf, rdfs.Class);
+    this.writeTriple(ec.Point3d, rdfs.subClassOf, rdfs.Class);
+    // rdf.Property types
+    this.writeEcIdProperty(ec.EntityClass, "Id", "The ECInstanceId for the entity instance");
     this.writeEcIdProperty(ec.LinkTableRelationshipClass, "Id", "The ECInstanceId of the relationship");
     this.writeEcIdProperty(ec.LinkTableRelationshipClass, "SourceId", "The SourceECInstanceId or *source* of the relationship");
     this.writeEcIdProperty(ec.LinkTableRelationshipClass, "TargetId", "The TargetECInstanceId or *target* of the relationship");
-    this.writeTriple(ec.NavigationRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
-    this.writeLabel(ec.NavigationRelationshipClass);
-    this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
-    this.writeLabel(ec.CustomAttributeClass);
-    this.writeTriple(ec.PrimitiveProperty, rdfs.subClassOf, rdf.Property);
-    this.writeLabel(ec.PrimitiveProperty);
-    this.writeTriple(ec.PrimitiveArrayProperty, rdfs.subClassOf, rdf.Property);
-    this.writeLabel(ec.PrimitiveArrayProperty);
-    this.writeTriple(ec.StructProperty, rdfs.subClassOf, rdf.Property);
-    this.writeLabel(ec.StructProperty);
-    this.writeTriple(ec.StructArrayProperty, rdfs.subClassOf, rdf.Property);
-    this.writeLabel(ec.StructArrayProperty);
-    this.writeTriple(ec.NavigationProperty, rdfs.subClassOf, rdf.Property);
-    this.writeLabel(ec.NavigationProperty);
-    this.writeLabel(ec.Id64String);
-    this.writeLabel(ec.JsonString);
-    this.writeLabel(ec.GuidString);
-    this.writeLabel(ec.Point2d);
-    this.writeLabel(ec.Point3d);
+    this.writeTriple(ec.Property, rdfs.subClassOf, rdf.Property);
+    this.writeTriple(ec.PrimitiveProperty, rdfs.subClassOf, ec.Property);
+    this.writeTriple(ec.PrimitiveArrayProperty, rdfs.subClassOf, ec.Property);
+    this.writeTriple(ec.StructProperty, rdfs.subClassOf, ec.Property);
+    this.writeTriple(ec.StructArrayProperty, rdfs.subClassOf, ec.Property);
+    this.writeTriple(ec.NavigationProperty, rdfs.subClassOf, ec.Property);
+    // primitive types
+    this.writeTriple(ec.GuidString, rdfs.subClassOf, xsd.string);
+    this.writeTriple(ec.Id64String, rdfs.subClassOf, xsd.string);
+    this.writeTriple(ec.JsonString, rdfs.subClassOf, xsd.string);
+    // write consistent labels for each "ec" enum member
+    Object.keys(ec).forEach((key) => this.writeLabel(`ec:${key}`));
   }
   private writeEcIdProperty(rdfName: string, idName: string, comment?: string): void {
     this.writeTriple(`${rdfName}-${idName}`, rdfs.subClassOf, ec.PrimitiveProperty);
     this.writeTriple(`${rdfName}-${idName}`, rdfs.domain, rdfName);
-    this.writeTriple(`${rdfName}-${idName}`, rdfs.range, xsd.string);
     this.writeTriple(`${rdfName}-${idName}`, rdfs.range, ec.Id64String);
     this.writeLabel(`${rdfName}-${idName}`, `${rdfName}.${idName}`);
     if (comment) {
@@ -181,7 +174,7 @@ export class TurtleExporter {
   public writeClass(c: ECClass): void {
     const classRdfName = this.formatSchemaItem(c);
     this.writeClassSubClassOf(classRdfName, c);
-    this.writeLabel(classRdfName, `${c.schema.alias}:${c.name}`);
+    this.writeLabel(classRdfName);
     if (c.description) {
       this.writeComment(classRdfName, c.description);
     }
