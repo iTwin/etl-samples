@@ -3,9 +3,9 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { IModelHost, SnapshotDb, SpatialCategory } from "@bentley/imodeljs-backend";
+import { IModel } from "@bentley/imodeljs-common";
 import { TextFileExporter } from "../TextFileExporter";
 import { TestUtils } from "./TestUtils";
-import { IModel } from "@bentley/imodeljs-common";
 
 describe("TextFileExporter", () => {
   before(async () => {
