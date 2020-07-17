@@ -59,8 +59,6 @@ enum ec {
   Class = "ec:Class",
   EntityClass = "ec:EntityClass",
   RelationshipClass = "ec:RelationshipClass",
-  LinkTableRelationshipClass = "ec:LinkTableRelationshipClass",
-  NavigationRelationshipClass = "ec:NavigationRelationshipClass",
   CustomAttributeClass = "ec:CustomAttributeClass",
   Enumeration = "ec:Enumeration",
   IGeometry = "ec:IGeometry",
@@ -119,8 +117,6 @@ export class TurtleExporter {
     this.writeTriple(ec.Class, rdfs.subClassOf, rdfs.Class);
     this.writeTriple(ec.EntityClass, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.RelationshipClass, rdfs.subClassOf, ec.Class);
-    this.writeTriple(ec.LinkTableRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
-    this.writeTriple(ec.NavigationRelationshipClass, rdfs.subClassOf, ec.RelationshipClass);
     this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.Mixin, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
@@ -128,9 +124,9 @@ export class TurtleExporter {
     this.writeTriple(ec.Point3d, rdfs.subClassOf, rdfs.Class);
     // rdf.Property types
     this.writePropertyTriples(ec.EntityClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the entity instance");
-    this.writePropertyTriples(ec.LinkTableRelationshipClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the relationship instance");
-    this.writePropertyTriples(ec.LinkTableRelationshipClass, "Source", ec.NavigationProperty, ec.EntityClass, "The source of the relationship");
-    this.writePropertyTriples(ec.LinkTableRelationshipClass, "Target", ec.NavigationProperty, ec.EntityClass, "The target of the relationship");
+    this.writePropertyTriples(ec.RelationshipClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the relationship instance");
+    this.writePropertyTriples(ec.RelationshipClass, "Source", ec.NavigationProperty, ec.EntityClass, "The source of the relationship");
+    this.writePropertyTriples(ec.RelationshipClass, "Target", ec.NavigationProperty, ec.EntityClass, "The target of the relationship");
     this.writeTriple(ec.Property, rdfs.subClassOf, rdf.Property);
     this.writeTriple(ec.PrimitiveProperty, rdfs.subClassOf, ec.Property);
     this.writeTriple(ec.PrimitiveArrayProperty, rdfs.subClassOf, ec.Property);
@@ -163,19 +159,10 @@ export class TurtleExporter {
     }
   }
   public writeClass(c: ECClass): void {
+    if (this.isNavigationRelationship(c)) {
+      return; // navigation relationships are skipped since navigation properties are exported as direct pointers
+    }
     const classRdfName = this.formatSchemaItem(c);
-    this.writeClassSubClassOf(classRdfName, c);
-    this.writeLabel(classRdfName);
-    if (c.description) {
-      this.writeComment(classRdfName, c.description);
-    }
-    if (c.properties) {
-      for (const property of c.properties) {
-        this.writeProperty(classRdfName, property);
-      }
-    }
-  }
-  private writeClassSubClassOf(classRdfName: string, c: ECClass): void {
     const baseClass: ECClass | undefined = c.getBaseClassSync();
     if (baseClass) {
       this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatSchemaItem(baseClass)}`);
@@ -194,16 +181,31 @@ export class TurtleExporter {
           this.writeTriple(classRdfName, rdfs.subClassOf, ec.Mixin);
           break;
         case SchemaItemType.RelationshipClass:
-          if (c.getCustomAttributesSync().has("ECDbMap.LinkTableRelationshipMap")) {
-            this.writeTriple(classRdfName, rdfs.subClassOf, ec.LinkTableRelationshipClass);
-          } else {
-            this.writeTriple(classRdfName, rdfs.subClassOf, ec.NavigationRelationshipClass);
-          }
+          this.writeTriple(classRdfName, rdfs.subClassOf, ec.RelationshipClass);
           break;
         default:
           throw new Error("Unexpected class type");
       }
     }
+    this.writeLabel(classRdfName);
+    if (c.description) {
+      this.writeComment(classRdfName, c.description);
+    }
+    if (c.properties) {
+      for (const property of c.properties) {
+        this.writeProperty(classRdfName, property);
+      }
+    }
+  }
+  private isNavigationRelationship(c: ECClass): boolean {
+    if (SchemaItemType.RelationshipClass === c.schemaItemType) {
+      const baseClass: ECClass | undefined = c.getBaseClassSync();
+      if (baseClass) {
+        return this.isNavigationRelationship(baseClass);
+      }
+      return !c.getCustomAttributesSync().has("ECDbMap.LinkTableRelationshipMap");
+    }
+    return false;
   }
   public formatSchemaItem(schemaItem: SchemaItem): string {
     return `${schemaItem.schema.alias}:${schemaItem.name}`;
