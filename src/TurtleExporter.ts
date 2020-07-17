@@ -3,7 +3,8 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import {
-  ECClass, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, Schema, SchemaItem, SchemaItemType,
+  ECClass, NavigationProperty, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, RelationshipClass, Schema, SchemaItem, SchemaItemType,
+  StrengthDirection,
 } from "@bentley/ecschema-metadata";
 import { IModelDb, IModelJsFs as fs } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader";
@@ -215,6 +216,12 @@ export class TurtleExporter {
     const schema = this.schemaLoader.getSchema(nameParts[0]);
     return this.formatSchemaItem(schema.getItemSync(nameParts[1])!);
   }
+  private tryGetClass(fullName: string): ECClass | undefined {
+    const nameParts: string[] = fullName.replace(".", ":").split(":");
+    const schema = this.schemaLoader.getSchema(nameParts[0]);
+    const schemaItem = schema.getItemSync(nameParts[1]);
+    return schemaItem instanceof ECClass ? schemaItem : undefined;
+  }
   public writeProperty(classRdfName: string, property: Property): void {
     if (property.isArray()) {
       if (property.isPrimitive()) {
@@ -231,13 +238,30 @@ export class TurtleExporter {
           this.writePrimitiveProperty(classRdfName, property);
         }
       } else if (property.isNavigation()) {
-        this.writePropertyTriples(classRdfName, property.name, ec.NavigationProperty, ec.EntityClass, property.description);
+        this.writeNavigationProperty(classRdfName, property);
       } else if (property.isStruct()) {
         this.writePropertyTriples(classRdfName, property.name, ec.StructProperty, undefined, property.description);
       } else if (property.isPrimitive()) {
         this.writePrimitiveProperty(classRdfName, property);
       }
     }
+  }
+  private writeNavigationProperty(classRdfName: string, property: NavigationProperty): void {
+    const relationshipClass = this.tryGetClass(property.relationshipClass.fullName)! as RelationshipClass;
+    let constraintClassRdfName: string = ec.EntityClass;
+    switch (property.direction) {
+      case StrengthDirection.Forward:
+        if (relationshipClass.target.constraintClasses) {
+          constraintClassRdfName = this.formatSchemaItemFullName(relationshipClass.target.constraintClasses[0].fullName);
+        }
+        break;
+      case StrengthDirection.Backward:
+        if (relationshipClass.source.constraintClasses) {
+          constraintClassRdfName = this.formatSchemaItemFullName(relationshipClass.source.constraintClasses[0].fullName);
+        }
+        break;
+    }
+    this.writePropertyTriples(classRdfName, property.name, ec.NavigationProperty, constraintClassRdfName, property.description);
   }
   private writePrimitiveProperty(classRdfName: string, property: PrimitiveProperty): void {
     let propertyRange: string;
