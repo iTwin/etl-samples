@@ -6,8 +6,8 @@ import {
   ECClass, NavigationProperty, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, RelationshipClass, Schema, SchemaItem, SchemaItemType,
   StrengthDirection,
 } from "@bentley/ecschema-metadata";
-import { IModelDb, IModelJsFs as fs } from "@bentley/imodeljs-backend";
-import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader";
+import { BisCoreSchema, Element, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs } from "@bentley/imodeljs-backend";
+import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/
@@ -78,24 +78,63 @@ enum ec {
   GuidString = "ec:GuidString",
 }
 
+/** Enumeration of RDF-compatible iModel types.
+ * @note These names have not been finalized.
+ * @beta
+ */
+enum iModel {
+  prefix = "iModel",
+  iri = "http://www.example.org/iModel#",
+}
+
 /** Exports iModel data to the Terse RDF Triple Language file format.
  * @see https://en.wikipedia.org/wiki/Turtle_(syntax)
  */
-export class TurtleExporter {
+export class TurtleExporter extends IModelExportHandler {
   public sourceDb: IModelDb;
-  public schemaLoader: IModelSchemaLoader;
   public targetFileName: string;
+  public schemaLoader: IModelSchemaLoader;
+  public iModelExporter: IModelExporter;
   constructor(sourceDb: IModelDb, targetFileName: string) {
+    super();
     if (fs.existsSync(targetFileName)) {
       fs.removeSync(targetFileName);
     }
     this.sourceDb = sourceDb;
-    this.schemaLoader = new IModelSchemaLoader(sourceDb);
     this.targetFileName = targetFileName;
-    this.writeRdfPrefix();
-    this.writeRdfsPrefix();
-    this.writeXsdPrefix();
-    this.writeEcTypes();
+    this.schemaLoader = new IModelSchemaLoader(sourceDb);
+    this.iModelExporter = new IModelExporter(sourceDb);
+    this.iModelExporter.registerHandler(this);
+    this.iModelExporter.wantGeometry = false;
+  }
+  /** Initiate the export */
+  public static export(iModelDb: IModelDb, outputFileName: string): void {
+    const handler = new TurtleExporter(iModelDb, outputFileName);
+    handler.writeRdfPrefix();
+    handler.writeRdfsPrefix();
+    handler.writeXsdPrefix();
+    handler.writeEcTypes();
+    if (false) {
+      // this.exporter.exportSchemas(); // WIP: waiting for exportSchemas method to show up in published packages
+    } else {
+      const schemasNames = [BisCoreSchema.schemaName, GenericSchema.schemaName];
+      for (const schemaName of schemasNames) {
+        const schema = handler.schemaLoader.getSchema(schemaName);
+        handler.writeSchema(schema);
+      }
+    }
+    handler.writeIModelPrefix();
+    handler.iModelExporter.exportAll();
+  }
+  /** Override of IModelExportHandler.onExportElement */
+  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
+    const elementClassRdfName = `${this.formatSchemaItemFullName(Element.classFullName)}`;
+    const elementInstanceRdfName = `${iModel.prefix}:${element.id}`;
+    this.writeTriple(elementInstanceRdfName, rdf.type, this.formatSchemaItemFullName(element.classFullName));
+    if (element.code.getValue() !== "") {
+      this.writeTriple(elementInstanceRdfName, `${elementClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
+    }
+    super.onExportElement(element, isUpdate); // call super to continue export
   }
   public writeTriple(subject: string, predicate: string, object: any): void {
     fs.appendFileSync(this.targetFileName, `${subject} ${predicate} ${object} .\n`);
@@ -111,6 +150,9 @@ export class TurtleExporter {
   }
   private writeXsdPrefix(): void {
     this.writePrefix(xsd.prefix, xsd.iri);
+  }
+  public writeIModelPrefix(): void {
+    this.writePrefix(iModel.prefix, iModel.iri);
   }
   private writeEcTypes(): void {
     this.writePrefix(ec.prefix, ec.iri);
