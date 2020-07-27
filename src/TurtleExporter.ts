@@ -2,12 +2,16 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
+import { Id64, Id64String } from "@bentley/bentleyjs-core";
 import {
   ECClass, NavigationProperty, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, RelationshipClass, Schema, SchemaItem, SchemaItemType,
   StrengthDirection,
 } from "@bentley/ecschema-metadata";
-import { BisCoreSchema, Element, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs } from "@bentley/imodeljs-backend";
+import {
+  BisCoreSchema, Element, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, Model, Relationship,
+} from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
+import { CodeSpec, IModel } from "@bentley/imodeljs-common";
 
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/
@@ -78,13 +82,12 @@ enum ec {
   GuidString = "ec:GuidString",
 }
 
-/** Enumeration of RDF-compatible iModel types.
- * @note These names have not been finalized.
- * @beta
- */
-enum iModel {
-  prefix = "iModel",
-  iri = "http://www.example.org/iModel#",
+enum InstancePrefix {
+  CodeSpec = "codeSpecId",
+  Element = "elementId",
+  ElementAspect = "aspectId",
+  Model = "modelId",
+  Relationship = "relationshipId",
 }
 
 /** Exports iModel data to the Terse RDF Triple Language file format.
@@ -123,18 +126,59 @@ export class TurtleExporter extends IModelExportHandler {
         handler.writeSchema(schema);
       }
     }
-    handler.writeIModelPrefix();
+    handler.writeInstancePrefixes();
     handler.iModelExporter.exportAll();
+  }
+  /** Override of IModelExportHandler.onExportCodeSpec */
+  protected onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
+    const codeSpecClassRdfName = this.formatSchemaItemFullName("BisCore:CodeSpec");
+    const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
+    this.writeTriple(codeSpecInstanceRdfName, rdf.type, codeSpecClassRdfName);
+    this.writeTriple(codeSpecInstanceRdfName, `${codeSpecClassRdfName}-Name`, `"${codeSpec.name}"`);
+    super.onExportCodeSpec(codeSpec, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportElement */
   protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
-    const elementClassRdfName = `${this.formatSchemaItemFullName(Element.classFullName)}`;
-    const elementInstanceRdfName = `${iModel.prefix}:${element.id}`;
-    this.writeTriple(elementInstanceRdfName, rdf.type, this.formatSchemaItemFullName(element.classFullName));
+    const bisElementClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
+    const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
+    const elementInstanceRdfName = this.formatElementInstanceId(element.id);
+    this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
+    this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-Model`, this.formatModelInstanceId(element.model));
     if (element.code.getValue() !== "") {
-      this.writeTriple(elementInstanceRdfName, `${elementClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
+    }
+    if (element.federationGuid) {
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-FederationGuid`, `"${element.federationGuid}"`);
+    }
+    if (element.userLabel) {
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-UserLabel`, `"${element.userLabel}"`);
+    }
+    if (element.parent?.id && Id64.isValidId64(element.parent.id)) {
+      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-Parent`, this.formatElementInstanceId(element.parent.id));
     }
     super.onExportElement(element, isUpdate); // call super to continue export
+  }
+  /** Override of IModelExportHandler.onExportModel */
+  protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
+    const bisModelClassRdfName = this.formatSchemaItemFullName(Model.classFullName);
+    const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
+    const modelInstanceRdfName = this.formatModelInstanceId(model.id);
+    this.writeTriple(modelInstanceRdfName, rdf.type, modelClassRdfName);
+    if (IModel.repositoryModelId !== model.id) {
+      this.writeTriple(modelInstanceRdfName, `${bisModelClassRdfName}-ModeledElement`, this.formatElementInstanceId(model.modeledElement.id));
+    }
+    super.onExportModel(model, isUpdate); // call super to continue export
+  }
+  /** Override of IModelExportHandler.onExportRelationship */
+  protected onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
+    const relationshipClassRdfName = this.formatSchemaItemFullName(relationship.classFullName);
+    const relationshipInstanceRdfName = this.formatRelationshipInstanceId(relationship.id);
+    this.writeTriple(relationshipInstanceRdfName, rdf.type, relationshipClassRdfName);
+    this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Source`, this.formatElementInstanceId(relationship.sourceId));
+    this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Target`, this.formatElementInstanceId(relationship.targetId));
+    super.onExportRelationship(relationship, isUpdate); // call super to continue export
   }
   public writeTriple(subject: string, predicate: string, object: any): void {
     fs.appendFileSync(this.targetFileName, `${subject} ${predicate} ${object} .\n`);
@@ -151,8 +195,13 @@ export class TurtleExporter extends IModelExportHandler {
   private writeXsdPrefix(): void {
     this.writePrefix(xsd.prefix, xsd.iri);
   }
-  public writeIModelPrefix(): void {
-    this.writePrefix(iModel.prefix, iModel.iri);
+  public writeInstancePrefixes(): void {
+    const basePrefix = `http://www.example.org/iModel/${this.sourceDb.iModelId}/`;
+    this.writePrefix(InstancePrefix.Element, `${basePrefix}codeSpec#`);
+    this.writePrefix(InstancePrefix.ElementAspect, `${basePrefix}aspect#`);
+    this.writePrefix(InstancePrefix.CodeSpec, `${basePrefix}element#`);
+    this.writePrefix(InstancePrefix.Model, `${basePrefix}model#`);
+    this.writePrefix(InstancePrefix.Relationship, `${basePrefix}relationship#`);
   }
   private writeEcTypes(): void {
     this.writePrefix(ec.prefix, ec.iri);
@@ -257,6 +306,18 @@ export class TurtleExporter extends IModelExportHandler {
     const nameParts: string[] = fullName.replace(".", ":").split(":");
     const schema = this.schemaLoader.getSchema(nameParts[0]);
     return this.formatSchemaItem(schema.getItemSync(nameParts[1])!);
+  }
+  public formatCodeSpecInstanceId(codeSpecId: Id64String): string {
+    return `${InstancePrefix.CodeSpec}:c${codeSpecId}`;
+  }
+  public formatElementInstanceId(elementId: Id64String): string {
+    return `${InstancePrefix.Element}:e${elementId}`;
+  }
+  public formatModelInstanceId(modelId: Id64String): string {
+    return `${InstancePrefix.Model}:m${modelId}`;
+  }
+  public formatRelationshipInstanceId(relationshipId: Id64String): string {
+    return `${InstancePrefix.Relationship}:r${relationshipId}`;
   }
   private tryGetClass(fullName: string): ECClass | undefined {
     const nameParts: string[] = fullName.replace(".", ":").split(":");
