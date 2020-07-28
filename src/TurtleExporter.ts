@@ -12,7 +12,7 @@ import {
   Model, Relationship,
 } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
-import { CodeSpec, IModel } from "@bentley/imodeljs-common";
+import { CodeSpec, IModel, RelatedElement } from "@bentley/imodeljs-common";
 
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/
@@ -135,30 +135,22 @@ export class TurtleExporter extends IModelExportHandler {
     const codeSpecClassRdfName = this.formatSchemaItemFullName("BisCore:CodeSpec");
     const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
     this.writeTriple(codeSpecInstanceRdfName, rdf.type, codeSpecClassRdfName);
-    this.writeTriple(codeSpecInstanceRdfName, `${codeSpecClassRdfName}-Name`, `"${codeSpec.name}"`);
+    this.writeTriple(codeSpecInstanceRdfName, `${codeSpecClassRdfName}-Name`, JSON.stringify(codeSpec.name)); // use JSON.stringify to add surrounding quotes and escape special characters
     super.onExportCodeSpec(codeSpec, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportElement */
   protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
-    const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
+    const elementClass: ECClass = this.tryGetClass(element.classFullName)!;
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
+    const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
     this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
-    this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-Model`, this.formatModelInstanceId(element.model));
-    if (element.code.getValue() !== "") {
+    if (element.code.getValue() !== "") { // handle custom mapping of Code between TypeScript and ECSchema
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
-      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, JSON.stringify(element.code.getValue())); // use JSON.stringify to add surrounding quotes and escape special characters
     }
-    if (element.federationGuid) {
-      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-FederationGuid`, `"${element.federationGuid}"`);
-    }
-    if (element.userLabel) {
-      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-UserLabel`, `"${element.userLabel}"`);
-    }
-    if (element.parent?.id && Id64.isValidId64(element.parent.id)) {
-      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-Parent`, this.formatElementInstanceId(element.parent.id));
-    }
+    this.writeInstanceProperties(element, elementClass, elementInstanceRdfName);
     super.onExportElement(element, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
@@ -233,8 +225,6 @@ export class TurtleExporter extends IModelExportHandler {
     this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.Mixin, rdfs.subClassOf, ec.Class);
     this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.Point2d, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.Point3d, rdfs.subClassOf, rdfs.Class);
     // rdf.Property types
     this.writePropertyTriples(ec.EntityClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the entity instance");
     this.writePropertyTriples(ec.RelationshipClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the relationship instance");
@@ -250,14 +240,16 @@ export class TurtleExporter extends IModelExportHandler {
     this.writeTriple(ec.GuidString, rdfs.subClassOf, xsd.string);
     this.writeTriple(ec.Id64String, rdfs.subClassOf, xsd.string);
     this.writeTriple(ec.JsonString, rdfs.subClassOf, xsd.string);
+    this.writeTriple(ec.Point2d, rdfs.subClassOf, ec.JsonString);
+    this.writeTriple(ec.Point3d, rdfs.subClassOf, ec.JsonString);
     // write consistent labels for each "ec" enum member
     Object.keys(ec).forEach((key) => this.writeLabel(`ec:${key}`));
   }
   public writeLabel(rdfName: string, label: string = rdfName): void {
-    this.writeTriple(rdfName, rdfs.label, `"${label}"`);
+    this.writeTriple(rdfName, rdfs.label, JSON.stringify(label)); // use JSON.stringify to add surrounding quotes and escape special characters
   }
   public writeComment(rdfName: string, comment: string): void {
-    this.writeTriple(rdfName, rdfs.comment, `"${comment}"`);
+    this.writeTriple(rdfName, rdfs.comment, JSON.stringify(comment)); // use JSON.stringify to add surrounding quotes and escape special characters
   }
   public writeSchema(schema: Schema): void {
     this.writePrefix(schema.alias, `http://www.example.org/schemas/${schema.schemaKey}#`);
@@ -453,6 +445,60 @@ export class TurtleExporter extends IModelExportHandler {
     }
     if (comment) {
       this.writeComment(propertyRdfName, comment);
+    }
+  }
+  private writeInstanceProperties(element: Element, elementClass: ECClass, elementInstanceRdfName: string): void {
+    const elementClassRdfName = this.formatSchemaItemFullName(elementClass.fullName);
+    if (elementClass.properties) {
+      for (const property of elementClass.properties) {
+        const propertyJsonName = property.name[0].toLowerCase() + property.name.substring(1);
+        const propertyValue = (element as any)[propertyJsonName];
+        if (propertyValue) {
+          this.writePropertyValue(elementInstanceRdfName, `${elementClassRdfName}-${property.name}`, property, propertyValue);
+        }
+      }
+    }
+    const baseClass: ECClass | undefined = elementClass.getBaseClassSync();
+    if (baseClass) {
+      this.writeInstanceProperties(element, baseClass, elementInstanceRdfName);
+    }
+  }
+  private writePropertyValue(elementInstanceRdfName: string, propertyRdfName: string, property: Property, propertyValue: any): void {
+    if (property.isPrimitive()) {
+      switch (property.primitiveType) {
+        case PrimitiveType.Binary: // Binary is not exported unless there is a recognized extendedType
+          if (property.extendedTypeName) {
+            switch (property.extendedTypeName.toLowerCase()) {
+              case "beguid":
+                this.writeTriple(elementInstanceRdfName, propertyRdfName, JSON.stringify(propertyValue)); // use JSON.stringify to add surrounding quotes
+                break;
+            }
+          }
+          break;
+        case PrimitiveType.Point2d:
+        case PrimitiveType.Point3d:
+          this.writeTriple(elementInstanceRdfName, propertyRdfName, JSON.stringify(JSON.stringify(propertyValue))); // use 2nd JSON.stringify to add surrounding quotes
+          break;
+        case PrimitiveType.String:
+          if (property.extendedTypeName?.toLowerCase() === "json") {
+            if (Object.keys(propertyValue).length > 0) {
+              // Call JSON.stringify twice to add surrounding quotes and escape internal quotes
+              this.writeTriple(elementInstanceRdfName, propertyRdfName, JSON.stringify(JSON.stringify(propertyValue)));
+            }
+          } else {
+            this.writeTriple(elementInstanceRdfName, propertyRdfName, JSON.stringify(propertyValue)); // use JSON.stringify to add surrounding quotes
+          }
+          break;
+        default:
+          this.writeTriple(elementInstanceRdfName, propertyRdfName, propertyValue);
+          break;
+      }
+    } else if (property.isNavigation()) {
+      const relatedEntityId: Id64String = RelatedElement.idFromJson(propertyValue);
+      if (relatedEntityId && Id64.isValidId64(relatedEntityId)) {
+        const relatedEntityRdfName = property.name.endsWith("Model") ? this.formatModelInstanceId(relatedEntityId) : this.formatElementInstanceId(relatedEntityId);
+        this.writeTriple(elementInstanceRdfName, propertyRdfName, relatedEntityRdfName);
+      }
     }
   }
 }
