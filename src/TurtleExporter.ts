@@ -8,7 +8,8 @@ import {
   StrengthDirection,
 } from "@bentley/ecschema-metadata";
 import {
-  BisCoreSchema, Element, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, Model, Relationship,
+  BisCoreSchema, Element, ElementMultiAspect, ElementUniqueAspect, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs,
+  Model, Relationship,
 } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 import { CodeSpec, IModel } from "@bentley/imodeljs-common";
@@ -139,35 +140,55 @@ export class TurtleExporter extends IModelExportHandler {
   }
   /** Override of IModelExportHandler.onExportElement */
   protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
-    const bisElementClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
+    const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
     this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
-    this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-Model`, this.formatModelInstanceId(element.model));
+    this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-Model`, this.formatModelInstanceId(element.model));
     if (element.code.getValue() !== "") {
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, `"${element.code.getValue()}"`);
     }
     if (element.federationGuid) {
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-FederationGuid`, `"${element.federationGuid}"`);
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-FederationGuid`, `"${element.federationGuid}"`);
     }
     if (element.userLabel) {
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-UserLabel`, `"${element.userLabel}"`);
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-UserLabel`, `"${element.userLabel}"`);
     }
     if (element.parent?.id && Id64.isValidId64(element.parent.id)) {
-      this.writeTriple(elementInstanceRdfName, `${bisElementClassRdfName}-Parent`, this.formatElementInstanceId(element.parent.id));
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-Parent`, this.formatElementInstanceId(element.parent.id));
     }
     super.onExportElement(element, isUpdate); // call super to continue export
   }
+  /** Override of IModelExportHandler.onExportElementUniqueAspect */
+  protected onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
+    const aspectBaseClassRdfName = this.formatSchemaItemFullName(ElementUniqueAspect.classFullName);
+    const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
+    const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
+    this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
+    this.writeTriple(aspectInstanceRdfName, `${aspectBaseClassRdfName}-Element`, this.formatElementInstanceId(aspect.element.id));
+    super.onExportElementUniqueAspect(aspect, isUpdate); // call super to continue export
+  }
+  /** Override of IModelExportHandler.onExportElementMultiAspects */
+  protected onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
+    const aspectBaseClassRdfName = this.formatSchemaItemFullName(ElementMultiAspect.classFullName);
+    for (const aspect of aspects) {
+      const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
+      const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
+      this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
+      this.writeTriple(aspectInstanceRdfName, `${aspectBaseClassRdfName}-Element`, this.formatElementInstanceId(aspect.element.id));
+    }
+    super.onExportElementMultiAspects(aspects); // call super to continue export
+  }
   /** Override of IModelExportHandler.onExportModel */
   protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
-    const bisModelClassRdfName = this.formatSchemaItemFullName(Model.classFullName);
+    const modelBaseClassRdfName = this.formatSchemaItemFullName(Model.classFullName);
     const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
     this.writeTriple(modelInstanceRdfName, rdf.type, modelClassRdfName);
     if (IModel.repositoryModelId !== model.id) {
-      this.writeTriple(modelInstanceRdfName, `${bisModelClassRdfName}-ModeledElement`, this.formatElementInstanceId(model.modeledElement.id));
+      this.writeTriple(modelInstanceRdfName, `${modelBaseClassRdfName}-ModeledElement`, this.formatElementInstanceId(model.modeledElement.id));
     }
     super.onExportModel(model, isUpdate); // call super to continue export
   }
@@ -312,6 +333,9 @@ export class TurtleExporter extends IModelExportHandler {
   }
   public formatElementInstanceId(elementId: Id64String): string {
     return `${InstancePrefix.Element}:e${elementId}`;
+  }
+  public formatAspectInstanceId(elementId: Id64String): string {
+    return `${InstancePrefix.ElementAspect}:a${elementId}`;
   }
   public formatModelInstanceId(modelId: Id64String): string {
     return `${InstancePrefix.Model}:m${modelId}`;
