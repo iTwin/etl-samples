@@ -8,11 +8,11 @@ import {
   StrengthDirection,
 } from "@bentley/ecschema-metadata";
 import {
-  BisCoreSchema, Element, ElementMultiAspect, ElementUniqueAspect, GenericSchema, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs,
-  Model, Relationship,
+  BisCoreSchema, Element, ElementMultiAspect, ElementUniqueAspect, Entity, GenericSchema, IModelDb, IModelExporter, IModelExportHandler,
+  IModelJsFs as fs, Model, Relationship,
 } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
-import { CodeSpec, IModel, RelatedElement } from "@bentley/imodeljs-common";
+import { CodeSpec, RelatedElement } from "@bentley/imodeljs-common";
 
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/
@@ -140,57 +140,57 @@ export class TurtleExporter extends IModelExportHandler {
   }
   /** Override of IModelExportHandler.onExportElement */
   protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
-    const elementClass: ECClass = this.tryGetClass(element.classFullName)!;
+    const elementClass: ECClass = this.tryGetECClass(element.classFullName)!;
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
-    const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
     this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
     if (element.code.getValue() !== "") { // handle custom mapping of Code between TypeScript and ECSchema
+      const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, JSON.stringify(element.code.getValue())); // use JSON.stringify to add surrounding quotes and escape special characters
     }
-    this.writeInstanceProperties(element, elementClass, elementInstanceRdfName);
+    this.writeEntityInstanceProperties(element, elementClass, elementInstanceRdfName);
     super.onExportElement(element, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
   protected onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
-    const aspectBaseClassRdfName = this.formatSchemaItemFullName(ElementUniqueAspect.classFullName);
+    const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
     const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
     const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
     this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
-    this.writeTriple(aspectInstanceRdfName, `${aspectBaseClassRdfName}-Element`, this.formatElementInstanceId(aspect.element.id));
+    this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
     super.onExportElementUniqueAspect(aspect, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportElementMultiAspects */
   protected onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
-    const aspectBaseClassRdfName = this.formatSchemaItemFullName(ElementMultiAspect.classFullName);
     for (const aspect of aspects) {
+      const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
       const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
       const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
       this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
-      this.writeTriple(aspectInstanceRdfName, `${aspectBaseClassRdfName}-Element`, this.formatElementInstanceId(aspect.element.id));
+      this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
     }
     super.onExportElementMultiAspects(aspects); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportModel */
   protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
-    const modelBaseClassRdfName = this.formatSchemaItemFullName(Model.classFullName);
+    const modelClass: ECClass = this.tryGetECClass(model.classFullName)!;
     const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
     this.writeTriple(modelInstanceRdfName, rdf.type, modelClassRdfName);
-    if (IModel.repositoryModelId !== model.id) {
-      this.writeTriple(modelInstanceRdfName, `${modelBaseClassRdfName}-ModeledElement`, this.formatElementInstanceId(model.modeledElement.id));
-    }
+    this.writeEntityInstanceProperties(model, modelClass, modelInstanceRdfName);
     super.onExportModel(model, isUpdate); // call super to continue export
   }
   /** Override of IModelExportHandler.onExportRelationship */
   protected onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
+    const relationshipClass: ECClass = this.tryGetECClass(relationship.classFullName)!;
     const relationshipClassRdfName = this.formatSchemaItemFullName(relationship.classFullName);
     const relationshipInstanceRdfName = this.formatRelationshipInstanceId(relationship.id);
     this.writeTriple(relationshipInstanceRdfName, rdf.type, relationshipClassRdfName);
     this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Source`, this.formatElementInstanceId(relationship.sourceId));
     this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Target`, this.formatElementInstanceId(relationship.targetId));
+    this.writeEntityInstanceProperties(relationship, relationshipClass, relationshipInstanceRdfName);
     super.onExportRelationship(relationship, isUpdate); // call super to continue export
   }
   public writeTriple(subject: string, predicate: string, object: any): void {
@@ -335,7 +335,7 @@ export class TurtleExporter extends IModelExportHandler {
   public formatRelationshipInstanceId(relationshipId: Id64String): string {
     return `${InstancePrefix.Relationship}:r${relationshipId}`;
   }
-  private tryGetClass(fullName: string): ECClass | undefined {
+  private tryGetECClass(fullName: string): ECClass | undefined {
     const nameParts: string[] = fullName.replace(".", ":").split(":");
     const schema = this.schemaLoader.getSchema(nameParts[0]);
     const schemaItem = schema.getItemSync(nameParts[1]);
@@ -366,7 +366,7 @@ export class TurtleExporter extends IModelExportHandler {
     }
   }
   private writeNavigationProperty(classRdfName: string, property: NavigationProperty): void {
-    const relationshipClass = this.tryGetClass(property.relationshipClass.fullName)! as RelationshipClass;
+    const relationshipClass = this.tryGetECClass(property.relationshipClass.fullName)! as RelationshipClass;
     let constraintClassRdfName: string = ec.EntityClass;
     switch (property.direction) {
       case StrengthDirection.Forward:
@@ -447,20 +447,20 @@ export class TurtleExporter extends IModelExportHandler {
       this.writeComment(propertyRdfName, comment);
     }
   }
-  private writeInstanceProperties(element: Element, elementClass: ECClass, elementInstanceRdfName: string): void {
-    const elementClassRdfName = this.formatSchemaItemFullName(elementClass.fullName);
-    if (elementClass.properties) {
-      for (const property of elementClass.properties) {
+  private writeEntityInstanceProperties(entity: Entity, entityClass: ECClass, entityInstanceRdfName: string): void {
+    const entityClassRdfName = this.formatSchemaItemFullName(entityClass.fullName);
+    if (entityClass.properties) {
+      for (const property of entityClass.properties) {
         const propertyJsonName = property.name[0].toLowerCase() + property.name.substring(1);
-        const propertyValue = (element as any)[propertyJsonName];
+        const propertyValue = (entity as any)[propertyJsonName];
         if (propertyValue) {
-          this.writePropertyValue(elementInstanceRdfName, `${elementClassRdfName}-${property.name}`, property, propertyValue);
+          this.writePropertyValue(entityInstanceRdfName, `${entityClassRdfName}-${property.name}`, property, propertyValue);
         }
       }
     }
-    const baseClass: ECClass | undefined = elementClass.getBaseClassSync();
+    const baseClass: ECClass | undefined = entityClass.getBaseClassSync();
     if (baseClass) {
-      this.writeInstanceProperties(element, baseClass, elementInstanceRdfName);
+      this.writeEntityInstanceProperties(entity, baseClass, entityInstanceRdfName);
     }
   }
   private writePropertyValue(elementInstanceRdfName: string, propertyRdfName: string, property: Property, propertyValue: any): void {
@@ -487,6 +487,21 @@ export class TurtleExporter extends IModelExportHandler {
             }
           } else {
             this.writeTriple(elementInstanceRdfName, propertyRdfName, JSON.stringify(propertyValue)); // use JSON.stringify to add surrounding quotes
+          }
+          break;
+        case PrimitiveType.Long:
+          if (property.extendedTypeName) {
+            switch (property.extendedTypeName.toLowerCase()) {
+              case "id":
+                const elementId: Id64String = RelatedElement.idFromJson(propertyValue);
+                if (elementId && Id64.isValidId64(elementId)) {
+                  this.writeTriple(elementInstanceRdfName, propertyRdfName, this.formatElementInstanceId(elementId));
+                }
+                break;
+              default:
+                this.writeTriple(elementInstanceRdfName, propertyRdfName, propertyValue);
+                break;
+            }
           }
           break;
         default:
