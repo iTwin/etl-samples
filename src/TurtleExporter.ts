@@ -118,17 +118,14 @@ export class TurtleExporter extends IModelExportHandler {
     handler.writeRdfsPrefix();
     handler.writeXsdPrefix();
     handler.writeEcTypes();
-    if (false) {
-      // this.exporter.exportSchemas(); // WIP: waiting for exportSchemas method to show up in published packages
-    } else {
-      const schemasNames = [BisCoreSchema.schemaName, GenericSchema.schemaName];
-      for (const schemaName of schemasNames) {
-        const schema = handler.schemaLoader.getSchema(schemaName);
-        handler.writeSchema(schema);
-      }
-    }
+    handler.iModelExporter.exportSchemas();
     handler.writeInstancePrefixes();
     handler.iModelExporter.exportAll();
+  }
+  /** Override of IModelExportHandler.onExportSchema */
+  protected onExportSchema(schema: Schema): void {
+    this.writeSchema(schema);
+    super.onExportSchema(schema);
   }
   /** Override of IModelExportHandler.onExportCodeSpec */
   protected onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
@@ -136,7 +133,7 @@ export class TurtleExporter extends IModelExportHandler {
     const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
     this.writeTriple(codeSpecInstanceRdfName, rdf.type, codeSpecClassRdfName);
     this.writeTriple(codeSpecInstanceRdfName, `${codeSpecClassRdfName}-Name`, JSON.stringify(codeSpec.name)); // use JSON.stringify to add surrounding quotes and escape special characters
-    super.onExportCodeSpec(codeSpec, isUpdate); // call super to continue export
+    super.onExportCodeSpec(codeSpec, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElement */
   protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
@@ -151,7 +148,7 @@ export class TurtleExporter extends IModelExportHandler {
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, JSON.stringify(element.code.getValue())); // use JSON.stringify to add surrounding quotes and escape special characters
     }
     this.writeEntityInstanceProperties(element, elementClass, elementInstanceRdfName);
-    super.onExportElement(element, isUpdate); // call super to continue export
+    super.onExportElement(element, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
   protected onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
@@ -160,7 +157,7 @@ export class TurtleExporter extends IModelExportHandler {
     const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
     this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
     this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
-    super.onExportElementUniqueAspect(aspect, isUpdate); // call super to continue export
+    super.onExportElementUniqueAspect(aspect, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementMultiAspects */
   protected onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
@@ -171,7 +168,7 @@ export class TurtleExporter extends IModelExportHandler {
       this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
       this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
     }
-    super.onExportElementMultiAspects(aspects); // call super to continue export
+    super.onExportElementMultiAspects(aspects);
   }
   /** Override of IModelExportHandler.onExportModel */
   protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
@@ -180,7 +177,7 @@ export class TurtleExporter extends IModelExportHandler {
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
     this.writeTriple(modelInstanceRdfName, rdf.type, modelClassRdfName);
     this.writeEntityInstanceProperties(model, modelClass, modelInstanceRdfName);
-    super.onExportModel(model, isUpdate); // call super to continue export
+    super.onExportModel(model, isUpdate);
   }
   /** Override of IModelExportHandler.onExportRelationship */
   protected onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
@@ -191,7 +188,7 @@ export class TurtleExporter extends IModelExportHandler {
     this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Source`, this.formatElementInstanceId(relationship.sourceId));
     this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Target`, this.formatElementInstanceId(relationship.targetId));
     this.writeEntityInstanceProperties(relationship, relationshipClass, relationshipInstanceRdfName);
-    super.onExportRelationship(relationship, isUpdate); // call super to continue export
+    super.onExportRelationship(relationship, isUpdate);
   }
   public writeTriple(subject: string, predicate: string, object: any): void {
     fs.appendFileSync(this.targetFileName, `${subject} ${predicate} ${object} .\n`);
