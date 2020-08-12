@@ -207,9 +207,9 @@ export class TurtleExporter extends IModelExportHandler {
   }
   public writeInstancePrefixes(): void {
     const basePrefix = `http://www.example.org/iModel/${this.sourceDb.iModelId}/`;
-    this.writePrefix(InstancePrefix.Element, `${basePrefix}codeSpec#`);
+    this.writePrefix(InstancePrefix.CodeSpec, `${basePrefix}codeSpec#`);
     this.writePrefix(InstancePrefix.ElementAspect, `${basePrefix}aspect#`);
-    this.writePrefix(InstancePrefix.CodeSpec, `${basePrefix}element#`);
+    this.writePrefix(InstancePrefix.Element, `${basePrefix}element#`);
     this.writePrefix(InstancePrefix.Model, `${basePrefix}model#`);
     this.writePrefix(InstancePrefix.Relationship, `${basePrefix}relationship#`);
   }
