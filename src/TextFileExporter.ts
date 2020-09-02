@@ -2,6 +2,7 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
+import { Schema } from "@bentley/ecschema-metadata";
 import {
   Element, ElementMultiAspect, ElementUniqueAspect, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, Model, Relationship,
 } from "@bentley/imodeljs-backend";
@@ -29,8 +30,8 @@ export class TextFileExporter extends IModelExportHandler {
   /** Initiate the export */
   public static export(iModelDb: IModelDb, outputFileName: string): void {
     const handler = new TextFileExporter(iModelDb, outputFileName);
-    // this.exporter.exportSchemas(); // WIP: waiting for exportSchemas method to show up in published packages
-    // this.writeSeparator();
+    handler.iModelExporter.exportSchemas();
+    handler.writeSeparator();
     handler.iModelExporter.exportAll();
   }
 
@@ -45,11 +46,11 @@ export class TextFileExporter extends IModelExportHandler {
     IModelJsFs.appendFileSync(this.outputFileName, "--------------------------------\n");
   }
 
-  // /** Override of IModelExportHandler.onExportSchema */
-  // protected onExportSchema(schema: Schema): void {
-  //   this.writeLine(`[Schema] ${schema.name}`);
-  //   super.onExportSchema(schema); // WIP: waiting for IModelExportHandler.onExportSchema method to show up in published packages
-  // }
+  /** Override of IModelExportHandler.onExportSchema */
+  protected onExportSchema(schema: Schema): void {
+    this.writeLine(`[Schema] ${schema.name}`);
+    super.onExportSchema(schema);
+  }
 
   /** Override of IModelExportHandler.onExportCodeSpec */
   protected onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {

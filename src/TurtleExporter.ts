@@ -8,8 +8,7 @@ import {
   StrengthDirection,
 } from "@bentley/ecschema-metadata";
 import {
-  BisCoreSchema, Element, ElementMultiAspect, ElementUniqueAspect, Entity, GenericSchema, IModelDb, IModelExporter, IModelExportHandler,
-  IModelJsFs as fs, Model, Relationship,
+  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, Model, Relationship,
 } from "@bentley/imodeljs-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 import { CodeSpec, RelatedElement } from "@bentley/imodeljs-common";
