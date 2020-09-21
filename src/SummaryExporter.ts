@@ -32,17 +32,15 @@ export class SummaryExporter extends IModelExportHandler {
   /** Initiate the export */
   public static export(iModelDb: IModelDb, outputFileName: string): void {
     const handler = new SummaryExporter(iModelDb, outputFileName);
-    // WIP: enable optimization when available in 2.6
-    // handler.iModelExporter.visitElements = true;
-    // handler.iModelExporter.visitRelationships = false;
+    handler.iModelExporter.visitElements = true;
+    handler.iModelExporter.visitRelationships = false;
     handler.iModelExporter.wantGeometry = false;
     handler.writeSectionHeader("Schemas");
     handler.iModelExporter.exportSchemas();
     handler.writeClassCounts();
     handler.writeSectionHeader("RepositoryModel");
     handler.iModelExporter.exportElement(IModel.rootSubjectId); // Get Subject/Partition hierarchy from RepositoryModel
-    // WIP: enable optimization when available in 2.6
-    // handler.iModelExporter.visitElements = false; // Only want element detail for the RepositoryModel
+    handler.iModelExporter.visitElements = false; // Only want element detail for the RepositoryModel
     handler.iModelExporter.exportAll();
   }
 
