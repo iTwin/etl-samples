@@ -3,7 +3,7 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { IModelHost, SnapshotDb } from "@bentley/imodeljs-backend";
-import { SummaryExporter } from "../SummaryExporter";
+import { SummaryExporter } from "../export/SummaryExporter";
 import { TestUtils } from "./TestUtils";
 
 describe("SummaryExporter", () => {

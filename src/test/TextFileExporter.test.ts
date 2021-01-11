@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 import { IModelHost, SnapshotDb, SpatialCategory } from "@bentley/imodeljs-backend";
 import { IModel } from "@bentley/imodeljs-common";
-import { TextFileExporter } from "../TextFileExporter";
+import { TextFileExporter } from "../export/TextFileExporter";
 import { TestUtils } from "./TestUtils";
 
 describe("TextFileExporter", () => {

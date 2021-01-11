@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 import { IModelHost, SnapshotDb, SpatialCategory } from "@bentley/imodeljs-backend";
 import { IModel } from "@bentley/imodeljs-common";
-import { CodeExporter } from "../CodeExporter";
+import { CodeExporter } from "../export/CodeExporter";
 import { TestUtils } from "./TestUtils";
 
 describe("CodeExporter", () => {
