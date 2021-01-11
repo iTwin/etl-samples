@@ -26,7 +26,7 @@
     "url": "http://www.bentley.com"
   },
   "devDependencies": {
-    "@bentley/build-tools": "^2.9.0",
+    "@bentley/build-tools": "^2.10.0",
     "@types/chai": "^4.2.12",
     "@types/mocha": "^5.2.7",
     "cpx": "^1.5.0",
@@ -37,17 +37,17 @@
     "typescript": "~3.7.4"
   },
   "dependencies": {
-    "@bentley/backend-itwin-client": "^2.9.0",
-    "@bentley/bentleyjs-core": "^2.9.0",
-    "@bentley/ecschema-metadata": "^2.9.0",
-    "@bentley/frontend-authorization-client": "^2.9.0",
-    "@bentley/geometry-core": "^2.9.0",
-    "@bentley/imodelhub-client": "^2.9.0",
-    "@bentley/imodeljs-backend": "^2.9.0",
-    "@bentley/imodeljs-common": "^2.9.0",
-    "@bentley/imodeljs-i18n": "^2.9.0",
-    "@bentley/itwin-client": "^2.9.0",
-    "@bentley/rbac-client": "^2.9.0",
-    "@bentley/telemetry-client": "^2.9.0"
+    "@bentley/backend-itwin-client": "^2.10.0",
+    "@bentley/bentleyjs-core": "^2.10.0",
+    "@bentley/ecschema-metadata": "^2.10.0",
+    "@bentley/frontend-authorization-client": "^2.10.0",
+    "@bentley/geometry-core": "^2.10.0",
+    "@bentley/imodelhub-client": "^2.10.0",
+    "@bentley/imodeljs-backend": "^2.10.0",
+    "@bentley/imodeljs-common": "^2.10.0",
+    "@bentley/imodeljs-i18n": "^2.10.0",
+    "@bentley/itwin-client": "^2.10.0",
+    "@bentley/rbac-client": "^2.10.0",
+    "@bentley/telemetry-client": "^2.10.0"
   }
 }
