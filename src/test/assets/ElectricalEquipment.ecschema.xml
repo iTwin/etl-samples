@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ECSchema schemaName="ElectricalEquipment" alias="eleq" version="01.00.00" xmlns="http://www.bentley.com/schemas/Bentley.ECXML.3.2" description="Sample schema">
+
+    <ECSchemaReference name="CoreCustomAttributes" version="01.00.03" alias="CoreCA"/>
+    <ECSchemaReference name="BisCore" version="01.00.12" alias="bis"/>
+
+    <ECCustomAttributes>
+        <ProductionStatus xmlns="CoreCustomAttributes.01.00.03">
+            <SupportedUse>NotForProduction</SupportedUse>
+        </ProductionStatus>
+    </ECCustomAttributes>
+
+    <ECEntityClass typeName="Equipment" modifier="Abstract">
+        <BaseClass>bis:PhysicalElement</BaseClass>
+    </ECEntityClass>
+
+    <ECEntityClass typeName="Breaker">
+        <BaseClass>Equipment</BaseClass>
+    </ECEntityClass>
+
+    <ECEntityClass typeName="Transformer">
+        <BaseClass>Equipment</BaseClass>
+    </ECEntityClass>
+
+</ECSchema>

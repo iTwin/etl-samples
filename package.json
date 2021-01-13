@@ -6,8 +6,9 @@
     "node": ">=10.16.0 <13.0"
   },
   "scripts": {
-    "build": "tsc 1>&2",
+    "build": "tsc 1>&2 && npm run copy:test-assets",
     "clean": "rimraf lib",
+    "copy:test-assets": "cpx \"./src/test/assets/**/*\" ./lib/test/assets",
     "lint": "tslint --project . 1>&2",
     "test": "betools test"
   },

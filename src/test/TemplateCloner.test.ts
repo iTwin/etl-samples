@@ -3,11 +3,12 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { assert } from "chai";
-import { Id64, Id64String } from "@bentley/bentleyjs-core";
+import * as path from "path";
+import { Id64, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
 import { Box, Cone, Point3d, PointString3d, Range3d, StandardViewIndex, Vector3d, YawPitchRollAngles } from "@bentley/geometry-core";
 import {
-  CategorySelector, DefinitionContainer, DisplayStyle3d, ElementOwnsChildElements, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition,
-  PhysicalModel, PhysicalObject, SnapshotDb, SpatialCategory, TemplateModelCloner, TemplateRecipe3d,
+  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DisplayStyle3d, ElementOwnsChildElements, IModelDb, IModelHost,
+  ModelSelector, OrthographicViewDefinition, PhysicalModel, PhysicalObject, SnapshotDb, SpatialCategory, TemplateModelCloner, TemplateRecipe3d,
 } from "@bentley/imodeljs-backend";
 import {
   Code, CodeScopeSpec, GeometryStreamBuilder, GeometryStreamProps, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance,
@@ -15,17 +16,31 @@ import {
 import { TestUtils } from "./TestUtils";
 
 describe("TemplateCloner", () => {
+  const loggerCategory = "TemplateClonerTest";
+
   before(async () => {
     await IModelHost.startup();
+    // optionally initialize logging
+    if (true) {
+      Logger.initializeToConsole();
+      Logger.setLevelDefault(LogLevel.Error);
+      Logger.setLevel(BackendLoggerCategory.IModelExporter, LogLevel.Trace);
+      Logger.setLevel(BackendLoggerCategory.IModelImporter, LogLevel.Trace);
+      Logger.setLevel(BackendLoggerCategory.IModelTransformer, LogLevel.Trace);
+      Logger.setLevel("test", LogLevel.Trace);
+    }
   });
 
   after(async () => {
     await IModelHost.shutdown();
   });
 
-  it("export", () => {
+  it("export", async () => {
     const iModelFileName = TestUtils.initOutputFile("TemplateCloner.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "TemplateCloner Test" }, createClassViews: true });
+    const schemaFilePath = path.join(__dirname, "assets", "ElectricalEquipment.ecschema.xml");
+    Logger.logInfo(loggerCategory, `${schemaFilePath}`);
+    await iModelDb.importSchemas(new BackendRequestContext(), [schemaFilePath]);
     const definitionManager = new DefinitionManager(iModelDb);
     definitionManager.ensureStandardDefinitions();
     definitionManager.ensureStandardDefinitions(); // call second time to simulate "already inserted" case
@@ -34,8 +49,8 @@ describe("TemplateCloner", () => {
     const physicalModel = iModelDb.models.getModel<PhysicalModel>(physicalModelId, PhysicalModel);
     const equipmentCategoryId = definitionManager.tryGetStandardCategoryId(StandardNames.EquipmentCategory)!;
     const wireCategoryId = definitionManager.tryGetStandardCategoryId(StandardNames.WireCategory)!;
-    const genericDeviceTemplateId = definitionManager.tryGetTemplateId("Sample Components", "Generic Device")!;
-    const breakerTemplateId = definitionManager.tryGetTemplateId("Sample Components", "ACME Breaker")!;
+    const genericDeviceTemplateId = definitionManager.tryGetTemplateId("ACME Equipment", "ACME Transformer")!;
+    const breakerTemplateId = definitionManager.tryGetTemplateId("ACME Equipment", "ACME Breaker")!;
     assert.isTrue(Id64.isValidId64(equipmentCategoryId));
     assert.isTrue(Id64.isValidId64(wireCategoryId));
     assert.isTrue(Id64.isValidId64(genericDeviceTemplateId));
@@ -75,7 +90,7 @@ describe("TemplateCloner", () => {
 enum StandardNames {
   MyDomain = "MyDomain",
   DefinitionContainerCodeSpec = "MyDomain:DefinitionContainer", // best practice is to use a namespace to ensure CodeSpec uniqueness
-  CategoryContainer = "MyDomain Categories",
+  CategoryContainer = "Electrical Equipment Categories",
   EquipmentCategory = "Equipment",
   WireCategory = "Wire",
 }
@@ -124,7 +139,7 @@ class DefinitionManager {
   }
 
   private ensureStandardCategories(): void {
-    const containerCode = this.createDefinitionContainerCode("MyDomain Categories");
+    const containerCode = this.createDefinitionContainerCode(StandardNames.CategoryContainer);
     let containerId = this._iModelDb.elements.queryElementIdByCode(containerCode);
     if (undefined === containerId) {
       containerId = DefinitionContainer.insert(this._iModelDb, IModel.dictionaryId, containerCode);
@@ -139,16 +154,16 @@ class DefinitionManager {
   }
 
   public insertSampleComponentDefinitions(): void {
-    const componentContainerId = DefinitionContainer.insert(this._iModelDb, IModel.dictionaryId, this.createDefinitionContainerCode("Sample Components"));
-    const equipmentCategoryId = this.tryGetStandardCategoryId("Equipment")!;
+    const componentContainerId = DefinitionContainer.insert(this._iModelDb, IModel.dictionaryId, this.createDefinitionContainerCode("ACME Equipment"));
+    const equipmentCategoryId = this.tryGetStandardCategoryId(StandardNames.EquipmentCategory)!;
     // Sample component that is a single element
-    const cylinderTemplateId = TemplateRecipe3d.insert(this._iModelDb, componentContainerId, "Generic Device");
+    const cylinderTemplateId = TemplateRecipe3d.insert(this._iModelDb, componentContainerId, "ACME Transformer");
     const cylinderProps: PhysicalElementProps = {
-      classFullName: PhysicalObject.classFullName,
+      classFullName: "ElectricalEquipment:Transformer",
       model: cylinderTemplateId,
       category: equipmentCategoryId,
-      code: Code.createEmpty(),
-      userLabel: "Generic Device",
+      code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
+      userLabel: "ACME Transformer",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
       geom: this.createCylinderGeom(1),
     };
@@ -156,10 +171,10 @@ class DefinitionManager {
     // Sample component that is a parent/child assembly
     const assemblyTemplateId = TemplateRecipe3d.insert(this._iModelDb, componentContainerId, "ACME Breaker");
     const assemblyHeadProps: PhysicalElementProps = {
-      classFullName: PhysicalObject.classFullName,
+      classFullName: "ElectricalEquipment:Breaker",
       model: assemblyTemplateId,
       category: equipmentCategoryId,
-      code: Code.createEmpty(),
+      code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Breaker",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
       geom: this.createBoxGeom(Point3d.create(1, 1, 1)),
