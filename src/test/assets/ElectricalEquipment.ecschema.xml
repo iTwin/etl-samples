@@ -3,6 +3,7 @@
 
     <ECSchemaReference name="CoreCustomAttributes" version="01.00.03" alias="CoreCA"/>
     <ECSchemaReference name="BisCore" version="01.00.12" alias="bis"/>
+    <ECSchemaReference name="Functional" version="01.00.03" alias="func" />
 
     <ECCustomAttributes>
         <ProductionStatus xmlns="CoreCustomAttributes.01.00.03">
@@ -14,12 +15,34 @@
         <BaseClass>bis:PhysicalElement</BaseClass>
     </ECEntityClass>
 
+    <ECEntityClass typeName="EquipmentDefinition">
+        <BaseClass>bis:DefinitionElement</BaseClass>
+    </ECEntityClass>
+
+    <ECRelationshipClass typeName="EquipmentDefinitionSpecifiesPhysicalRecipe" strength="referencing" modifier="None">
+        <BaseClass>bis:ElementRefersToElements</BaseClass>
+        <Source multiplicity="(0..*)" roleLabel="specifies" polymorphic="true">
+            <Class class="EquipmentDefinition"/>
+        </Source>
+        <Target multiplicity="(0..*)" roleLabel="is specified by" polymorphic="true">
+            <Class class="bis:TemplateRecipe3d"/>
+        </Target>
+    </ECRelationshipClass>
+
     <ECEntityClass typeName="Breaker">
         <BaseClass>Equipment</BaseClass>
     </ECEntityClass>
 
+    <ECEntityClass typeName="BreakerFunction">
+        <BaseClass>func:FunctionalComponentElement</BaseClass>
+    </ECEntityClass>
+
     <ECEntityClass typeName="Transformer">
         <BaseClass>Equipment</BaseClass>
+    </ECEntityClass>
+
+    <ECEntityClass typeName="TransformerFunction">
+        <BaseClass>func:FunctionalComponentElement</BaseClass>
     </ECEntityClass>
 
 </ECSchema>
