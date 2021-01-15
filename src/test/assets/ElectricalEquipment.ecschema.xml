@@ -24,8 +24,18 @@
         <Source multiplicity="(0..*)" roleLabel="specifies" polymorphic="true">
             <Class class="EquipmentDefinition"/>
         </Source>
-        <Target multiplicity="(0..*)" roleLabel="is specified by" polymorphic="true">
+        <Target multiplicity="(0..1)" roleLabel="is specified by" polymorphic="true">
             <Class class="bis:TemplateRecipe3d"/>
+        </Target>
+    </ECRelationshipClass>
+
+    <ECRelationshipClass typeName="EquipmentDefinitionSpecifiesDrawingRecipe" strength="referencing" modifier="None">
+        <BaseClass>bis:ElementRefersToElements</BaseClass>
+        <Source multiplicity="(0..*)" roleLabel="specifies" polymorphic="true">
+            <Class class="EquipmentDefinition"/>
+        </Source>
+        <Target multiplicity="(0..*)" roleLabel="is specified by" polymorphic="true">
+            <Class class="bis:TemplateRecipe2d"/>
         </Target>
     </ECRelationshipClass>
 

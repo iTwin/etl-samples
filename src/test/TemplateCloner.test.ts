@@ -5,15 +5,18 @@
 import { assert } from "chai";
 import * as path from "path";
 import { DbResult, Id64, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
-import { Box, Cone, Point3d, PointString3d, Range3d, StandardViewIndex, Vector3d, YawPitchRollAngles } from "@bentley/geometry-core";
 import {
-  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DisplayStyle3d, ECSqlStatement,
-  ElementOwnsChildElements, FunctionalModel, FunctionalSchema, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition, PhysicalElement,
-  PhysicalModel, SnapshotDb, SpatialCategory, SpatialLocation, TemplateModelCloner, TemplateRecipe3d,
+  Arc3d, Box, Cone, LineString3d, Point2d, Point3d, PointString3d, Range3d, StandardViewIndex, Vector3d, YawPitchRollAngles,
+} from "@bentley/geometry-core";
+import {
+  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DisplayStyle3d, DocumentListModel, Drawing,
+  DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel, FunctionalSchema, IModelDb, IModelHost,
+  ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel, SnapshotDb, SpatialCategory,
+  SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
 } from "@bentley/imodeljs-backend";
 import {
-  Code, CodeScopeSpec, GeometricElement3dProps, GeometryStreamBuilder, GeometryStreamProps, IModel, PhysicalElementProps, Placement3d,
-  SubCategoryAppearance,
+  BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps,
+  GeometryStreamBuilder, GeometryStreamProps, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance,
 } from "@bentley/imodeljs-common";
 import { TestUtils } from "./TestUtils";
 
@@ -23,7 +26,7 @@ describe("TemplateCloner", () => {
   before(async () => {
     await IModelHost.startup();
     // optionally initialize logging
-    if (true) {
+    if (false) {
       Logger.initializeToConsole();
       Logger.setLevelDefault(LogLevel.Error);
       Logger.setLevel(BackendLoggerCategory.IModelExporter, LogLevel.Trace);
@@ -37,7 +40,7 @@ describe("TemplateCloner", () => {
     await IModelHost.shutdown();
   });
 
-  it("export", async () => {
+  it("should populate an iModel with template definitions and cloned instances", async () => {
     const iModelFileName = TestUtils.initOutputFile("TemplateCloner.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "TemplateCloner Test" }, createClassViews: true });
     const projectExtents = new Range3d(-2000, -2000, -500, 2000, 2000, 500); // set some arbitrary projectExtents that all SpatialElements should be within
@@ -47,21 +50,23 @@ describe("TemplateCloner", () => {
     await iModelDb.importSchemas(new BackendRequestContext(), [FunctionalSchema.schemaFilePath, schemaFilePath]);
     const definitionManager = new StandardDefinitionManager(iModelDb);
     definitionManager.ensureStandardDefinitions();
-    const equipmentCategoryId = definitionManager.tryGetStandardCategoryId(CategoryName.Equipment)!;
-    const wireCategoryId = definitionManager.tryGetStandardCategoryId(CategoryName.Wire)!;
+    const equipmentCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
+    const wireCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Wire)!;
     assert.isTrue(Id64.isValidId64(equipmentCategoryId));
     assert.isTrue(Id64.isValidId64(wireCategoryId));
     definitionManager.ensureStandardDefinitions(); // call second time to simulate "already inserted" case
     const equipmentDefinitionCreator = new SampleEquipmentDefinitionCreator(definitionManager);
     equipmentDefinitionCreator.insertSampleComponentDefinitions();
     const physicalModelId = PhysicalModel.insert(iModelDb, IModel.rootSubjectId, "PhysicalModel");
-    const functionalModelId = FunctionalModel.insert(iModelDb, IModel.rootSubjectId, "FunctionalModel");
     const physicalModel = iModelDb.models.getModel<PhysicalModel>(physicalModelId, PhysicalModel);
+    const functionalModelId = FunctionalModel.insert(iModelDb, IModel.rootSubjectId, "FunctionalModel");
+    const documentListModelId = DocumentListModel.insert(iModelDb, IModel.rootSubjectId, "Drawings");
+    const drawingId = Drawing.insert(iModelDb, documentListModelId, "Drawing");
     const transformerDefinitionId = definitionManager.tryGetEquipmentDefinitionId("ACME Equipment", "ACME Transformer")!;
     const breakerDefinitionId = definitionManager.tryGetEquipmentDefinitionId("ACME Equipment", "ACME Breaker")!;
     assert.isTrue(Id64.isValidId64(transformerDefinitionId));
     assert.isTrue(Id64.isValidId64(breakerDefinitionId));
-    const placer = new EquipmentPlacer(definitionManager, physicalModelId, functionalModelId);
+    const placer = new EquipmentPlacer(definitionManager, physicalModelId, functionalModelId, drawingId);
     const transformerOrigins = [
       Point3d.create(10, 10), Point3d.create(20, 10), Point3d.create(30, 10),
       Point3d.create(10, 20), Point3d.create(20, 20), Point3d.create(30, 20),
@@ -92,7 +97,7 @@ describe("TemplateCloner", () => {
 
 /** Enum containing the names of the standard CodeSpec created by this domain.
  * @note It is a best practice is to use a namespace to ensure CodeSpec uniqueness.
-*/
+ */
 enum CodeSpecName {
   DefinitionContainer = "ElectricalEquipment:DefinitionContainer",
   Equipment = "ElectricalEquipment:Equipment",
@@ -100,12 +105,24 @@ enum CodeSpecName {
   FunctionalEquipment = "ElectricalEquipment:FunctionalEquipment",
 }
 
-/** Enum containing the names of the standard SpatialCategory and DrawingCategory elements created by this domain.
- * @note These names are scoped to a specific DefinitionContainer for uniqueness across domains.
+/** Enum containing the names of the standard SpatialCategory elements created by this domain.
+ * SpatialCategories are specific to 3d.
+ * @note These names are scoped to a specific DefinitionContainer to ensure uniqueness across domains.
  */
-enum CategoryName {
-  Equipment = "Equipment",
-  Wire = "Wire",
+enum SpatialCategoryName {
+  Equipment = "Equipment", // for Equipment in a PhysicalModel
+  Wire = "Wire", // for Wire in a PhysicalModel
+}
+
+/** Enum containing the names of the standard DrawingCategory elements created by this domain.
+ * DrawingCategories are specific to 2d.
+ * @note These names are scoped to a specific DefinitionContainer to ensure uniqueness across domains.
+ */
+enum DrawingCategoryName {
+  Notes = "Notes",
+  TitleBlock = "TitleBlock",
+  Equipment = "Equipment", // for Equipment in a 2d schematic DrawingModel
+  Wire = "Wire", // for Wire in a 2d schematic DrawingModel
 }
 
 enum DefinitionContainerName {
@@ -129,12 +146,20 @@ class StandardDefinitionManager {
     return this.iModelDb.elements.queryElementIdByCode(this.createDefinitionContainerCode(containerName));
   }
 
-  public tryGetStandardCategoryId(categoryName: string): Id64String | undefined {
+  public tryGetSpatialCategoryId(categoryName: string): Id64String | undefined {
     const containerId = this.tryGetContainerId(DefinitionContainerName.Categories);
     if (undefined === containerId) {
       return undefined;
     }
     return this.iModelDb.elements.queryElementIdByCode(SpatialCategory.createCode(this.iModelDb, containerId, categoryName));
+  }
+
+  public tryGetDrawingCategoryId(categoryName: string): Id64String | undefined {
+    const containerId = this.tryGetContainerId(DefinitionContainerName.Categories);
+    if (undefined === containerId) {
+      return undefined;
+    }
+    return this.iModelDb.elements.queryElementIdByCode(DrawingCategory.createCode(this.iModelDb, containerId, categoryName));
   }
 
   public tryGetEquipmentDefinitionId(containerName: string, definitionName: string): Id64String | undefined {
@@ -185,18 +210,51 @@ class StandardDefinitionManager {
   }
 
   private ensureStandardCategories(): void {
+    // the DefinitionContainer for all categories
     const containerCode = this.createDefinitionContainerCode(DefinitionContainerName.Categories);
     let containerId = this.iModelDb.elements.queryElementIdByCode(containerCode);
     if (undefined === containerId) {
       containerId = DefinitionContainer.insert(this.iModelDb, IModel.dictionaryId, containerCode);
     }
-    this.ensureStandardCategory(containerId, CategoryName.Equipment, new SubCategoryAppearance());
-    this.ensureStandardCategory(containerId, CategoryName.Wire, new SubCategoryAppearance());
+    // the standard SpatialCategories
+    this.ensureSpatialCategory(containerId, SpatialCategoryName.Equipment, new SubCategoryAppearance());
+    this.ensureSpatialCategory(containerId, SpatialCategoryName.Wire, new SubCategoryAppearance());
+    // the standard DrawingCategories
+    this.ensureDrawingCategory(containerId, DrawingCategoryName.Notes, new SubCategoryAppearance());
+    this.ensureDrawingCategory(containerId, DrawingCategoryName.TitleBlock, new SubCategoryAppearance());
+    this.ensureDrawingCategory(containerId, DrawingCategoryName.Equipment, new SubCategoryAppearance());
+    this.ensureDrawingCategory(containerId, DrawingCategoryName.Wire, new SubCategoryAppearance());
   }
 
-  private ensureStandardCategory(containerId: Id64String, categoryName: string, appearance: SubCategoryAppearance): Id64String {
+  private ensureSpatialCategory(containerId: Id64String, categoryName: string, appearance: SubCategoryAppearance): Id64String {
     const categoryId = this.iModelDb.elements.queryElementIdByCode(SpatialCategory.createCode(this.iModelDb, containerId, categoryName));
     return categoryId ?? SpatialCategory.insert(this.iModelDb, containerId, categoryName, appearance);
+  }
+
+  private ensureDrawingCategory(containerId: Id64String, categoryName: string, appearance: SubCategoryAppearance): Id64String {
+    const categoryId = this.iModelDb.elements.queryElementIdByCode(DrawingCategory.createCode(this.iModelDb, containerId, categoryName));
+    return categoryId ?? DrawingCategory.insert(this.iModelDb, containerId, categoryName, appearance);
+  }
+
+  /** Insert a TemplateRecipe2d and its sub-DrawingModel
+   * @note Should use TemplateRecipe2d.insert when it is added to @bentley/imodeljs-backend
+   */
+  public insertTemplateRecipe2d(containerId: Id64String, recipeName: string): Id64String {
+    const codeSpec = this.iModelDb.codeSpecs.getByName(BisCodeSpec.templateRecipe2d);
+    const code = new Code({ spec: codeSpec.id, scope: containerId, value: recipeName });
+    const elementProps: DefinitionElementProps = {
+      classFullName: TemplateRecipe2d.classFullName,
+      model: containerId,
+      code,
+    };
+    const templateRecipe = new TemplateRecipe2d(elementProps, this.iModelDb);
+    const templateRecipeId = this.iModelDb.elements.insertElement(templateRecipe);
+    const modelProps: GeometricModel2dProps = {
+      classFullName: DrawingModel.classFullName,
+      modeledElement: { id: templateRecipeId },
+      isTemplate: true,
+    };
+    return this.iModelDb.models.insertModel(modelProps);
   }
 }
 
@@ -211,58 +269,77 @@ class SampleEquipmentDefinitionCreator {
     const manager = this._definitionManager;
     const iModelDb = manager.iModelDb;
     const containerId = DefinitionContainer.insert(iModelDb, IModel.dictionaryId, manager.createDefinitionContainerCode("ACME Equipment"));
-    const equipmentCategoryId = manager.tryGetStandardCategoryId(CategoryName.Equipment)!;
-    // ACME Transformer
+    const equipmentSpatialCategoryId = manager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
+    const equipmentDrawingCategoryId = manager.tryGetDrawingCategoryId(DrawingCategoryName.Equipment)!;
+
+    // ACME Transformer - EquipmentDefinition
     const transformerDefinitionId = iModelDb.elements.insertElement({
       classFullName: "ElectricalEquipment:EquipmentDefinition",
       model: containerId,
       code: manager.createEquipmentDefinitionCode(containerId, "ACME Transformer"),
-      jsonProperties: { "equipmentParams": { functionalClassFullName: "ElectricalEquipment:TransformerFunction" } },
+      jsonProperties: { equipmentParams: { functionalClassFullName: "ElectricalEquipment:TransformerFunction" } },
     });
+    // ACME Transformer - Physical Template
     const transformerPhysicalTemplateId = TemplateRecipe3d.insert(iModelDb, containerId, "ACME Transformer"); // this inserts the TemplateRecipe3d element and its sub-model
-    iModelDb.relationships.insertInstance({
-      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe",
-      sourceId: transformerDefinitionId,
-      targetId: transformerPhysicalTemplateId,
-    });
-    const transformerProps: PhysicalElementProps = {
+    const transformerPhysicalProps: PhysicalElementProps = {
       classFullName: "ElectricalEquipment:Transformer",
       model: transformerPhysicalTemplateId,
-      category: equipmentCategoryId,
+      category: equipmentSpatialCategoryId,
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Transformer",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
       geom: this.createCylinderGeom(1),
     };
-    manager.iModelDb.elements.insertElement(transformerProps);
-    // ACME Breaker
+    manager.iModelDb.elements.insertElement(transformerPhysicalProps);
+    // ACME Transformer - Relationship between EquipmentDefinition and 3d Template
+    iModelDb.relationships.insertInstance({
+      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe",
+      sourceId: transformerDefinitionId,
+      targetId: transformerPhysicalTemplateId,
+    });
+    // ACME Transformer - Drawing Template
+    const transformerDrawingTemplateId = manager.insertTemplateRecipe2d(containerId, "ACME Transformer");
+    const transformerDrawingGraphicProps: GeometricElement2dProps = {
+      classFullName: DrawingGraphic.classFullName,
+      model: transformerDrawingTemplateId,
+      category: equipmentDrawingCategoryId,
+      code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
+      userLabel: "ACME Transformer",
+      placement: { origin: Point2d.createZero(), angle: 0 },
+      geom: this.createCircleGeom(1),
+    };
+    manager.iModelDb.elements.insertElement(transformerDrawingGraphicProps);
+    // ACME Transformer - Relationship between EquipmentDefinition and 2d Template
+    iModelDb.relationships.insertInstance({
+      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesDrawingRecipe",
+      sourceId: transformerDefinitionId,
+      targetId: transformerDrawingTemplateId,
+    });
+
+    // ACME Breaker - EquipmentDefinition
     const breakerDefinitionId = iModelDb.elements.insertElement({
       classFullName: "ElectricalEquipment:EquipmentDefinition",
       model: containerId,
       code: manager.createEquipmentDefinitionCode(containerId, "ACME Breaker"),
-      jsonProperties: { "equipmentParams": { functionalClassFullName: "ElectricalEquipment:BreakerFunction" } },
+      jsonProperties: { equipmentParams: { functionalClassFullName: "ElectricalEquipment:BreakerFunction" } },
     });
+    // ACME Breaker - Physical Template
     const breakerPhysicalTemplateId = TemplateRecipe3d.insert(iModelDb, containerId, "ACME Breaker"); // this inserts the TemplateRecipe3d element and its sub-model
-    iModelDb.relationships.insertInstance({
-      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe",
-      sourceId: breakerDefinitionId,
-      targetId: breakerPhysicalTemplateId,
-    });
-    const breakerProps: PhysicalElementProps = {
+    const breakerPhysicalProps: PhysicalElementProps = {
       classFullName: "ElectricalEquipment:Breaker",
       model: breakerPhysicalTemplateId,
-      category: equipmentCategoryId,
+      category: equipmentSpatialCategoryId,
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Breaker",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
       geom: this.createBoxGeom(Point3d.create(1, 1, 1)),
     };
-    const breakerId = iModelDb.elements.insertElement(breakerProps);
-    // Insert input hook point
+    const breakerId = iModelDb.elements.insertElement(breakerPhysicalProps);
+    // ACME Breaker - Input hook point
     const childElementProps: GeometricElement3dProps = {
       classFullName: SpatialLocation.classFullName,
       model: breakerPhysicalTemplateId,
-      category: equipmentCategoryId,
+      category: equipmentSpatialCategoryId,
       parent: new ElementOwnsChildElements(breakerId),
       code: Code.createEmpty(),
       userLabel: "Input",
@@ -270,11 +347,36 @@ class SampleEquipmentDefinitionCreator {
       geom: this.createPointGeom(),
     };
     iModelDb.elements.insertElement(childElementProps);
-    // Insert output hook point
+    // ACME Breaker - Output hook point
     childElementProps.userLabel = "Output";
     childElementProps.placement!.origin = Point3d.create(0.75, 0.5, 1);
     iModelDb.elements.insertElement(childElementProps);
+    // ACME Breaker - Relationship between EquipmentDefinition and 3d Template
+    iModelDb.relationships.insertInstance({
+      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe",
+      sourceId: breakerDefinitionId,
+      targetId: breakerPhysicalTemplateId,
+    });
+    // ACME Breaker - Drawing Template
+    const breakerDrawingTemplateId = manager.insertTemplateRecipe2d(containerId, "ACME Breaker");
+    const breakerDrawingGraphicProps: GeometricElement2dProps = {
+      classFullName: DrawingGraphic.classFullName,
+      model: breakerDrawingTemplateId,
+      category: equipmentDrawingCategoryId,
+      code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
+      userLabel: "ACME Breaker",
+      placement: { origin: Point2d.createZero(), angle: 0 },
+      geom: this.createRectangleGeom(Point2d.create(1, 1)),
+    };
+    manager.iModelDb.elements.insertElement(breakerDrawingGraphicProps);
+    // ACME Breaker - Relationship between EquipmentDefinition and 2d Template
+    iModelDb.relationships.insertInstance({
+      classFullName: "ElectricalEquipment:EquipmentDefinitionSpecifiesDrawingRecipe",
+      sourceId: breakerDefinitionId,
+      targetId: breakerDrawingTemplateId,
+    });
   }
+
   /** Creates a GeometryStream containing a single cylinder entry. */
   private createCylinderGeom(radius: number): GeometryStreamProps {
     const pointA = Point3d.create(0, 0, 0);
@@ -299,24 +401,44 @@ class SampleEquipmentDefinitionCreator {
     builder.appendGeometry(PointString3d.create(Point3d.createZero()));
     return builder.geometryStream;
   }
+  /** Creates a GeometryStream containing a single circle entry. */
+  private createCircleGeom(radius: number): GeometryStreamProps {
+    const builder = new GeometryStreamBuilder();
+    builder.appendGeometry(Arc3d.createXY(Point3d.createZero(), radius)); // NOTE: will be valid for a GeometricElement2d GeometryStream
+    return builder.geometryStream;
+  }
+  /** Creates a GeometryStream containing a single rectangle entry. */
+  private createRectangleGeom(size: Point2d): GeometryStreamProps {
+    const builder = new GeometryStreamBuilder();
+    builder.appendGeometry(LineString3d.createPoints([
+      new Point3d(0, 0),
+      new Point3d(size.x, 0),
+      new Point3d(size.x, size.y),
+      new Point3d(0, size.y),
+      new Point3d(0, 0),
+    ]));
+    return builder.geometryStream;
+  }
 }
 
 class EquipmentPlacer extends TemplateModelCloner {
   private _definitionManager: StandardDefinitionManager;
   private _physicalModelId: Id64String;
   private _functionalModelId: Id64String;
-  public constructor(definitionManager: StandardDefinitionManager, physicalModelId: Id64String, functionalModelId: Id64String) {
+  private _drawingModelId: Id64String;
+  public constructor(definitionManager: StandardDefinitionManager, physicalModelId: Id64String, functionalModelId: Id64String, drawingModelId: Id64String) {
     super(definitionManager.iModelDb, definitionManager.iModelDb); // cloned Equipment instances will be in the same iModel as the EquipmentDefinition
     this._definitionManager = definitionManager;
     this._physicalModelId = physicalModelId;
     this._functionalModelId = functionalModelId;
-    const equipmentCategoryId = definitionManager.tryGetStandardCategoryId(CategoryName.Equipment)!;
+    this._drawingModelId = drawingModelId;
+    const equipmentCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
     this.context.remapElement(equipmentCategoryId, equipmentCategoryId); // map category of definition to category of instance - in this case the same
   }
   public placeEquipmentInstance(equipmentDefinitionId: Id64String, placement: Placement3d, codeValue?: string): void {
     const equipmentDefinition = this.sourceDb.elements.getElement<DefinitionElement>(equipmentDefinitionId, DefinitionElement);
-    const sql = "SELECT TargetECInstanceId FROM ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe WHERE SourceECInstanceId=:sourceId";
-    const physicalTemplateId = this.sourceDb.withPreparedStatement(sql, (statement: ECSqlStatement) => {
+    const physicalTemplateSql = "SELECT TargetECInstanceId FROM ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe WHERE SourceECInstanceId=:sourceId";
+    const physicalTemplateId = this.sourceDb.withPreparedStatement(physicalTemplateSql, (statement: ECSqlStatement) => {
       statement.bindId("sourceId", equipmentDefinitionId);
       return DbResult.BE_SQLITE_ROW === statement.step() ? statement.getValue(0).getId() : undefined;
     });
@@ -349,11 +471,20 @@ class EquipmentPlacer extends TemplateModelCloner {
       });
       if (physicalInstanceId) {
         this.targetDb.relationships.insertInstance({
-          classFullName: "Functional:PhysicalElementFulfillsFunction",
+          classFullName: PhysicalElementFulfillsFunction.classFullName,
           sourceId: physicalInstanceId,
           targetId: functionalInstanceId,
         });
       }
     }
+    // WIP: waiting for missing @bentley/imodeljs-backend placeTemplate2d API
+    // create the DrawingGraphic by cloning/placing a template
+    // const drawingTemplateSql = "SELECT TargetECInstanceId FROM ElectricalEquipment:EquipmentDefinitionSpecifiesDrawingRecipe WHERE SourceECInstanceId=:sourceId";
+    // const drawingTemplateId = this.sourceDb.withPreparedStatement(drawingTemplateSql, (statement: ECSqlStatement) => {
+    //   statement.bindId("sourceId", equipmentDefinitionId);
+    //   return DbResult.BE_SQLITE_ROW === statement.step() ? statement.getValue(0).getId() : undefined;
+    // });
+    // let drawingGraphicInstanceId: Id64String | undefined;
+    // ...
   }
 }
