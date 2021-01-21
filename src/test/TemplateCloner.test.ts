@@ -4,15 +4,15 @@
 *--------------------------------------------------------------------------------------------*/
 import { assert } from "chai";
 import * as path from "path";
-import { DbResult, Id64, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
+import { DbResult, Id64, Id64Array, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
 import {
   Arc3d, Box, Cone, LineString3d, Point2d, Point3d, PointString3d, Range3d, StandardViewIndex, Vector3d, YawPitchRollAngles,
 } from "@bentley/geometry-core";
 import {
-  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DisplayStyle3d, DocumentListModel, Drawing,
-  DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel, FunctionalSchema, IModelDb, IModelHost,
-  ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel, SnapshotDb, SpatialCategory,
-  SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
+  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DefinitionModel, DisplayStyle3d,
+  DocumentListModel, Drawing, DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel,
+  FunctionalSchema, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel,
+  SnapshotDb, SpatialCategory, SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
 } from "@bentley/imodeljs-backend";
 import {
   BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps,
@@ -91,6 +91,49 @@ describe("TemplateCloner", () => {
     const viewId = OrthographicViewDefinition.insert(iModelDb, IModel.dictionaryId, "Orthographic View", modelSelectorId, categorySelectorId, displayStyleId, modelExtents, StandardViewIndex.Iso);
     assert.isTrue(Id64.isValidId64(viewId));
     placer.dispose();
+    iModelDb.close();
+  });
+
+  it.skip("should create template views", async () => {
+    const seedFileName = "d:/data/bim/electricalcatalog.bim";
+    const seedDb = SnapshotDb.openFile(seedFileName);
+    const iModelFileName = TestUtils.initOutputFile("template-views.bim");
+    const iModelDb = SnapshotDb.createFrom(seedDb, iModelFileName);
+    seedDb.close();
+    const projectExtents = new Range3d(-2000, -2000, -500, 2000, 2000, 500); // set some arbitrary projectExtents that all SpatialElements should be within
+    iModelDb.updateProjectExtents(projectExtents);
+    const getInstanceIds = (elementClassFullName: string): Id64Array => {
+      return iModelDb.withPreparedStatement(`SELECT ECInstanceId FROM ${elementClassFullName}`, (statement: ECSqlStatement) => {
+        Logger.logInfo(loggerCategory, `=== ${elementClassFullName} ===`);
+        const elementIds: Id64Array = [];
+        while (DbResult.BE_SQLITE_ROW === statement.step()) {
+          const elementId = statement.getValue(0).getId();
+          const element = iModelDb.elements.getElement(elementId);
+          Logger.logInfo(loggerCategory, `${elementId} - ${element.getDisplayLabel()}`)
+          elementIds.push(elementId);
+        }
+        return elementIds;
+      });
+    };
+    const definitionModelId = DefinitionModel.insert(iModelDb, IModel.rootSubjectId, "Template Views");
+    const categoryIds = getInstanceIds(SpatialCategory.classFullName);
+    const categorySelectorId = CategorySelector.insert(iModelDb, definitionModelId, "All Spatial Categories", categoryIds);
+    const displayStyleId = DisplayStyle3d.insert(iModelDb, definitionModelId, "Template Views Display Style");
+    const templateIds = getInstanceIds(TemplateRecipe3d.classFullName);
+    const cloner = new TemplateModelCloner(iModelDb, iModelDb);
+    categoryIds.forEach((categoryId: Id64String) => {
+      cloner.context.remapElement(categoryId, categoryId); // map category of definition to category of instance - in this case the same
+    });
+    templateIds.forEach((templateId: Id64String) => {
+      const template = iModelDb.elements.getElement<TemplateRecipe3d>(templateId, TemplateRecipe3d);
+      const templateName = template.code.getValue();
+      const physicalModelId = PhysicalModel.insert(iModelDb, IModel.rootSubjectId, templateName);
+      const physicalModel = iModelDb.models.getModel<PhysicalModel>(physicalModelId, PhysicalModel);
+      const modelSelectorId = ModelSelector.insert(iModelDb, definitionModelId, templateName, [physicalModelId]);
+      cloner.placeTemplate3d(template.id, physicalModelId, new Placement3d(Point3d.createZero(), new YawPitchRollAngles(), Range3d.createNull()));
+      const modelExtents = physicalModel.queryExtents();
+      OrthographicViewDefinition.insert(iModelDb, definitionModelId, templateName, modelSelectorId, categorySelectorId, displayStyleId, modelExtents, StandardViewIndex.Iso);
+    });
     iModelDb.close();
   });
 });
