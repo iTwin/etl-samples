@@ -2,8 +2,10 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { Element, GeometricElement3d, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, SpatialCategory } from "@bentley/imodeljs-backend";
-import { Code } from "@bentley/imodeljs-common";
+import {
+  ECSqlStatement, Element, GeometricElement3d, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, SpatialCategory,
+} from "@bentley/imodeljs-backend";
+import { Code, DbResult } from "@bentley/imodeljs-common";
 
 /** ElementPropertyExporter creates a JSON output file that captures, on a per Element basis, each Element's direct properties and some related properties. */
 export class ElementPropertyExporter extends IModelExportHandler {
@@ -66,12 +68,25 @@ export class ElementPropertyExporter extends IModelExportHandler {
     // If present, get props for the TypeDefinition related to this Element
     const typeDefinitionProps = element.typeDefinition ? iModelDb.elements.tryGetElementProps(element.typeDefinition.id) : undefined;
 
+    // Example of following a relationship
+    const functionalSql = "SELECT TargetECInstanceId FROM Functional:PhysicalElementFulfillsFunction WHERE SourceECInstanceId=:sourceId";
+    const functionalProps = iModelDb.withPreparedStatement(functionalSql, (statement: ECSqlStatement) => {
+      const exportProps = [];
+      statement.bindId("sourceId", element.id);
+      while (DbResult.BE_SQLITE_ROW === statement.step()) {
+        const targetId = statement.getValue(0).getId();
+        exportProps.push(iModelDb.elements.tryGetElementProps(targetId));
+      }
+      return exportProps.length > 0 ? exportProps : undefined;
+    });
+
     // ... Follow other relationship here ...
 
     return {
       element: exportElementProps,
       elementAspects: exportAspectProps,
       typeDefinition: typeDefinitionProps,
+      functional: functionalProps,
       // ... Add other related props here ...
     };
   }
