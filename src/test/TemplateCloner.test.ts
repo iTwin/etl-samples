@@ -5,9 +5,7 @@
 import { assert } from "chai";
 import * as path from "path";
 import { DbResult, Id64, Id64Array, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
-import {
-  Arc3d, Box, Cone, LineString3d, Point2d, Point3d, PointString3d, Range3d, StandardViewIndex, Vector3d, YawPitchRollAngles,
-} from "@bentley/geometry-core";
+import { Point2d, Point3d, Range3d, StandardViewIndex, YawPitchRollAngles } from "@bentley/geometry-core";
 import {
   BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DefinitionModel, DisplayStyle3d,
   DocumentListModel, Drawing, DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel,
@@ -15,8 +13,8 @@ import {
   SnapshotDb, SpatialCategory, SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
 } from "@bentley/imodeljs-backend";
 import {
-  BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps,
-  GeometryStreamBuilder, GeometryStreamProps, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance,
+  BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps, IModel,
+  PhysicalElementProps, Placement3d, SubCategoryAppearance,
 } from "@bentley/imodeljs-common";
 import { TestUtils } from "./TestUtils";
 
@@ -109,7 +107,7 @@ describe("TemplateCloner", () => {
         while (DbResult.BE_SQLITE_ROW === statement.step()) {
           const elementId = statement.getValue(0).getId();
           const element = iModelDb.elements.getElement(elementId);
-          Logger.logInfo(loggerCategory, `${elementId} - ${element.getDisplayLabel()}`)
+          Logger.logInfo(loggerCategory, `${elementId} - ${element.getDisplayLabel()}`);
           elementIds.push(elementId);
         }
         return elementIds;
@@ -331,7 +329,7 @@ class SampleEquipmentDefinitionCreator {
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Transformer",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
-      geom: this.createCylinderGeom(1),
+      geom: TestUtils.createCylinderGeom(1),
     };
     manager.iModelDb.elements.insertElement(transformerPhysicalProps);
     // ACME Transformer - Relationship between EquipmentDefinition and 3d Template
@@ -349,7 +347,7 @@ class SampleEquipmentDefinitionCreator {
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Transformer",
       placement: { origin: Point2d.createZero(), angle: 0 },
-      geom: this.createCircleGeom(1),
+      geom: TestUtils.createCircleGeom(1),
     };
     manager.iModelDb.elements.insertElement(transformerDrawingGraphicProps);
     // ACME Transformer - Relationship between EquipmentDefinition and 2d Template
@@ -375,7 +373,7 @@ class SampleEquipmentDefinitionCreator {
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Breaker",
       placement: { origin: Point3d.createZero(), angles: { yaw: 0, pitch: 0, roll: 0 } },
-      geom: this.createBoxGeom(Point3d.create(1, 1, 1)),
+      geom: TestUtils.createBoxGeom(Point3d.create(1, 1, 1)),
     };
     const breakerId = iModelDb.elements.insertElement(breakerPhysicalProps);
     // ACME Breaker - Input hook point
@@ -387,7 +385,7 @@ class SampleEquipmentDefinitionCreator {
       code: Code.createEmpty(),
       userLabel: "Input",
       placement: { origin: Point3d.create(0.25, 0.5, 1), angles: { yaw: 0, pitch: 0, roll: 0 } },
-      geom: this.createPointGeom(),
+      geom: TestUtils.createPointGeom(),
     };
     iModelDb.elements.insertElement(childElementProps);
     // ACME Breaker - Output hook point
@@ -409,7 +407,7 @@ class SampleEquipmentDefinitionCreator {
       code: Code.createEmpty(), // empty in the template, should be set when an instance is placed
       userLabel: "ACME Breaker",
       placement: { origin: Point2d.createZero(), angle: 0 },
-      geom: this.createRectangleGeom(Point2d.create(1, 1)),
+      geom: TestUtils.createRectangleGeom(Point2d.create(1, 1)),
     };
     manager.iModelDb.elements.insertElement(breakerDrawingGraphicProps);
     // ACME Breaker - Relationship between EquipmentDefinition and 2d Template
@@ -419,62 +417,19 @@ class SampleEquipmentDefinitionCreator {
       targetId: breakerDrawingTemplateId,
     });
   }
-
-  /** Creates a GeometryStream containing a single cylinder entry. */
-  private createCylinderGeom(radius: number): GeometryStreamProps {
-    const pointA = Point3d.create(0, 0, 0);
-    const pointB = Point3d.create(0, 0, 2 * radius);
-    const cylinder = Cone.createBaseAndTarget(pointA, pointB, Vector3d.unitX(), Vector3d.unitY(), radius, radius, true);
-    const builder = new GeometryStreamBuilder();
-    builder.appendGeometry(cylinder);
-    return builder.geometryStream;
-  }
-  /** Creates a GeometryStream containing a single box entry. */
-  private createBoxGeom(size: Point3d): GeometryStreamProps {
-    const builder = new GeometryStreamBuilder();
-    builder.appendGeometry(Box.createDgnBox(
-      Point3d.createZero(), Vector3d.unitX(), Vector3d.unitY(), new Point3d(0, 0, size.z),
-      size.x, size.y, size.x, size.y, true,
-    )!);
-    return builder.geometryStream;
-  }
-  /** Creates a GeometryStream containing a single point entry. */
-  private createPointGeom(): GeometryStreamProps {
-    const builder = new GeometryStreamBuilder();
-    builder.appendGeometry(PointString3d.create(Point3d.createZero()));
-    return builder.geometryStream;
-  }
-  /** Creates a GeometryStream containing a single circle entry. */
-  private createCircleGeom(radius: number): GeometryStreamProps {
-    const builder = new GeometryStreamBuilder();
-    builder.appendGeometry(Arc3d.createXY(Point3d.createZero(), radius)); // NOTE: will be valid for a GeometricElement2d GeometryStream
-    return builder.geometryStream;
-  }
-  /** Creates a GeometryStream containing a single rectangle entry. */
-  private createRectangleGeom(size: Point2d): GeometryStreamProps {
-    const builder = new GeometryStreamBuilder();
-    builder.appendGeometry(LineString3d.createPoints([
-      new Point3d(0, 0),
-      new Point3d(size.x, 0),
-      new Point3d(size.x, size.y),
-      new Point3d(0, size.y),
-      new Point3d(0, 0),
-    ]));
-    return builder.geometryStream;
-  }
 }
 
 class EquipmentPlacer extends TemplateModelCloner {
   private _definitionManager: StandardDefinitionManager;
   private _physicalModelId: Id64String;
   private _functionalModelId: Id64String;
-  private _drawingModelId: Id64String;
-  public constructor(definitionManager: StandardDefinitionManager, physicalModelId: Id64String, functionalModelId: Id64String, drawingModelId: Id64String) {
+  // private _drawingModelId: Id64String;
+  public constructor(definitionManager: StandardDefinitionManager, physicalModelId: Id64String, functionalModelId: Id64String, _drawingModelId: Id64String) {
     super(definitionManager.iModelDb, definitionManager.iModelDb); // cloned Equipment instances will be in the same iModel as the EquipmentDefinition
     this._definitionManager = definitionManager;
     this._physicalModelId = physicalModelId;
     this._functionalModelId = functionalModelId;
-    this._drawingModelId = drawingModelId;
+    // this._drawingModelId = drawingModelId;
     const equipmentCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
     this.context.remapElement(equipmentCategoryId, equipmentCategoryId); // map category of definition to category of instance - in this case the same
   }

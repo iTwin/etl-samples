@@ -10,7 +10,8 @@
     "imodeljs",
     "itwin",
     "rbac",
-    "rdfs"
+    "rdfs",
+    "tbgr"
   ],
   "importSorter.importStringConfiguration.quoteMark": "double",
   "importSorter.generalConfiguration.sortImportsInDirectory": false,

@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ECSchema schemaName="WorkPackaging" alias="workpack" version="01.00.00" xmlns="http://www.bentley.com/schemas/Bentley.ECXML.3.2" description="Sample work package schema">
+
+    <ECSchemaReference name="CoreCustomAttributes" version="01.00.03" alias="CoreCA"/>
+    <ECSchemaReference name="BisCore" version="01.00.12" alias="bis"/>
+
+    <ECCustomAttributes>
+        <ProductionStatus xmlns="CoreCustomAttributes.01.00.03">
+            <!-- Simple schema for use by sample code -->
+            <SupportedUse>NotForProduction</SupportedUse>
+        </ProductionStatus>
+    </ECCustomAttributes>
+
+    <ECEntityClass typeName="WorkPackage">
+        <BaseClass>bis:GroupInformationElement</BaseClass>
+        <ECProperty propertyName="WorkPackageType" typeName="string" />
+        <ECNavigationProperty propertyName="Appearance" relationshipName="WorkPackageSpecifiesAppearance" direction="Forward" />
+    </ECEntityClass>
+    <ECRelationshipClass typeName="WorkPackageSpecifiesAppearance" strength="referencing" modifier="Sealed">
+        <!-- @see WorkPackage.Appearance ECNavigationProperty -->
+        <Source multiplicity="(0..*)" roleLabel="specifies" polymorphic="true">
+            <Class class="WorkPackage" />
+        </Source>
+        <Target multiplicity="(0..1)" roleLabel="is specified by" polymorphic="true">
+            <Class class="bis:SubCategory"/>
+        </Target>
+    </ECRelationshipClass>
+
+    <ECRelationshipClass typeName="WorkPackageGroupsElements" strength="referencing" modifier="None">
+        <BaseClass>bis:ElementGroupsMembers</BaseClass>
+        <Source multiplicity="(0..*)" roleLabel="groups" polymorphic="true">
+            <Class class="WorkPackage"/>
+        </Source>
+        <Target multiplicity="(0..*)" roleLabel="is grouped by" polymorphic="true">
+            <Class class="bis:Element"/>
+        </Target>
+    </ECRelationshipClass>
+
+</ECSchema>
