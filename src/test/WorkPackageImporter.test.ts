@@ -74,7 +74,7 @@ describe("WorkPackageImporter", () => {
     // augment the iModel with work packaging information
     const wpImporterSubjectId = Subject.insert(iModelDb, IModel.rootSubjectId, "Work Package Data");
     ChannelRootAspect.insert(iModelDb, wpImporterSubjectId, "Work Package Data");
-    const wpDefinitionModelId = DefinitionModel.insert(iModelDb, pdImporterSubjectId, "Work Package Definitions");
+    const wpDefinitionModelId = DefinitionModel.insert(iModelDb, wpImporterSubjectId, "Work Package Definitions");
     const wpCategoryId = SpatialCategory.insert(iModelDb, wpDefinitionModelId, "Work Package Appearances", new SubCategoryAppearance());
     const wpAppearanceId1 = SubCategory.insert(iModelDb, wpCategoryId, "Appearance 1", { color: ColorDef.red.tbgr });
     const wpAppearanceId2 = SubCategory.insert(iModelDb, wpCategoryId, "Appearance 2", { color: ColorDef.green.tbgr });
