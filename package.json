@@ -3,7 +3,7 @@
   "description": "Extract, Transform, and Load (ETL) samples that demonstrate export, transformation, and import of data from/to iModels",
   "license": "MIT",
   "engines": {
-    "node": ">=10.16.0 <13.0"
+    "node": ">=10.16.0 <15.0"
   },
   "scripts": {
     "build": "tsc 1>&2 && npm run copy:test-assets",
