@@ -4,13 +4,13 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as path from "path";
-import { DbResult } from "@bentley/bentleyjs-core";
-import { Point3d, Range3d, YawPitchRollAngles } from "@bentley/geometry-core";
+import { DbResult } from "@itwin/core-bentley";
+import { Point3d, Range3d, YawPitchRollAngles } from "@itwin/core-geometry";
 import {
   BackendRequestContext, ChannelRootAspect, DefinitionModel, ECSqlStatement, GroupModel, IModelHost, PhysicalElement, PhysicalModel, PhysicalObject,
   SnapshotDb, SpatialCategory, SubCategory, Subject,
-} from "@bentley/imodeljs-backend";
-import { Code, CodeScopeSpec, ColorDef, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance } from "@bentley/imodeljs-common";
+} from "@itwin/core-backend";
+import { Code, CodeScopeSpec, ColorDef, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance } from "@itwin/core-common";
 import { TestUtils } from "./TestUtils";
 
 describe("WorkPackageImporter", () => {

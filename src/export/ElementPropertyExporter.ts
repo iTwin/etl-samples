@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 import {
   ECSqlStatement, Element, GeometricElement3d, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, SpatialCategory,
-} from "@bentley/imodeljs-backend";
-import { Code, DbResult } from "@bentley/imodeljs-common";
+} from "@itwin/core-backend";
+import { Code, DbResult } from "@itwin/core-common";
 
 /** ElementPropertyExporter creates a JSON output file that captures, on a per Element basis, each Element's direct properties and some related properties. */
 export class ElementPropertyExporter extends IModelExportHandler {

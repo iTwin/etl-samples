@@ -4,18 +4,18 @@
 *--------------------------------------------------------------------------------------------*/
 import { assert } from "chai";
 import * as path from "path";
-import { DbResult, Id64, Id64Array, Id64String, Logger, LogLevel } from "@bentley/bentleyjs-core";
-import { Point2d, Point3d, Range3d, StandardViewIndex, YawPitchRollAngles } from "@bentley/geometry-core";
+import { DbResult, Id64, Id64Array, Id64String, Logger, LogLevel } from "@itwin/core-bentley";
+import { Point2d, Point3d, Range3d, StandardViewIndex, YawPitchRollAngles } from "@itwin/core-geometry";
 import {
   BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DefinitionModel, DisplayStyle3d,
   DocumentListModel, Drawing, DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel,
   FunctionalSchema, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel,
   SnapshotDb, SpatialCategory, SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
-} from "@bentley/imodeljs-backend";
+} from "@itwin/core-backend";
 import {
   BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps, IModel,
   PhysicalElementProps, Placement3d, SubCategoryAppearance,
-} from "@bentley/imodeljs-common";
+} from "@itwin/core-common";
 import { TestUtils } from "./TestUtils";
 
 const loggerCategory = "TemplateClonerTest";

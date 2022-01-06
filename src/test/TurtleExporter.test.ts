@@ -2,7 +2,7 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { IModelHost, SnapshotDb } from "@bentley/imodeljs-backend";
+import { IModelHost, SnapshotDb } from "@itwin/core-backend";
 import { TurtleExporter } from "../export/TurtleExporter";
 import { TestUtils } from "./TestUtils";
 

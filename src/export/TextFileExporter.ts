@@ -2,11 +2,11 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { Schema } from "@bentley/ecschema-metadata";
+import { Schema } from "@itwin/ecschema-metadata";
 import {
   Element, ElementMultiAspect, ElementUniqueAspect, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, Model, Relationship,
-} from "@bentley/imodeljs-backend";
-import { CodeSpec, FontProps } from "@bentley/imodeljs-common";
+} from "@itwin/core-backend";
+import { CodeSpec, FontProps } from "@itwin/core-common";
 
 /** Exports a text summary of the iModel contents to an output text file. */
 export class TextFileExporter extends IModelExportHandler {

@@ -3,13 +3,13 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 
-import { DbResult, Id64String } from "@bentley/bentleyjs-core";
-import { Schema } from "@bentley/ecschema-metadata";
+import { DbResult, Id64String } from "@itwin/core-bentley";
+import { Schema } from "@itwin/ecschema-metadata";
 import {
   ECSqlStatement, Element, GeometricElement2d, GeometricElement3d, GeometricModel2d, GeometricModel3d, IModelDb, IModelExporter, IModelExportHandler,
   IModelJsFs, InformationPartitionElement, Model,
-} from "@bentley/imodeljs-backend";
-import { IModel } from "@bentley/imodeljs-common";
+} from "@itwin/core-backend";
+import { IModel } from "@itwin/core-common";
 
 /** Exports a summary of the iModel contents to an output text file. */
 export class SummaryExporter extends IModelExportHandler {

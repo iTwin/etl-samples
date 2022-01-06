@@ -2,16 +2,16 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { Id64, Id64String } from "@bentley/bentleyjs-core";
+import { Id64, Id64String } from "@itwin/core-bentley";
 import {
   ECClass, NavigationProperty, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, RelationshipClass, Schema, SchemaItem, SchemaItemType,
   StrengthDirection,
-} from "@bentley/ecschema-metadata";
+} from "@itwin/ecschema-metadata";
 import {
   Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, Model, Relationship,
-} from "@bentley/imodeljs-backend";
+} from "@itwin/core-backend";
 import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
-import { CodeSpec, RelatedElement } from "@bentley/imodeljs-common";
+import { CodeSpec, RelatedElement } from "@itwin/core-common";
 
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/

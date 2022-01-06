@@ -1,9 +1,9 @@
-import { Logger, LogLevel } from "@bentley/bentleyjs-core";
+import { Logger, LogLevel } from "@itwin/core-bentley";
 /*---------------------------------------------------------------------------------------------
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { BackendLoggerCategory, IModelHost, SnapshotDb } from "@bentley/imodeljs-backend";
+import { BackendLoggerCategory, IModelHost, SnapshotDb } from "@itwin/core-backend";
 import { ElementPropertyExporter } from "../export/ElementPropertyExporter";
 import { TestUtils } from "./TestUtils";
 
