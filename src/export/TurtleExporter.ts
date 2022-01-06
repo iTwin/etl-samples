@@ -11,10 +11,9 @@ import {
   StrengthDirection,
 } from "@itwin/ecschema-metadata";
 import {
-  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelJsFs as fs, IModelDb, Model, Relationship,
+  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelJsFs as fs, IModelDb, IModelSchemaLoader, Model, Relationship,
 } from "@itwin/core-backend";
 import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
-import { IModelSchemaLoader } from "@itwin/core-backend/lib/cjs/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 import { CodeSpec, RelatedElement } from "@itwin/core-common";
 
 // disable shadowing errors for enum names
