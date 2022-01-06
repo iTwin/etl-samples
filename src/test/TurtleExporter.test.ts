@@ -15,11 +15,11 @@ describe("TurtleExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it("export", () => {
+  it("export", async () => {
     const outputFileName = TestUtils.initOutputFile("TurtleExporter.txt");
     const iModelFileName = TestUtils.initOutputFile("TurtleExporter.bim");
     const iModelDb: SnapshotDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "Test" }, createClassViews: true });
-    TurtleExporter.export(iModelDb, outputFileName);
+    await TurtleExporter.export(iModelDb, outputFileName);
     iModelDb.close();
   });
 });

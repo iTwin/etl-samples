@@ -12,7 +12,7 @@ import {
   FunctionalSchema, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel,
   SnapshotDb, SpatialCategory, SpatialLocation, TemplateRecipe2d, TemplateRecipe3d,
 } from "@itwin/core-backend";
-import { TransformerLoggerCategory, TemplateModelCloner } from "@itwin/core-transformer";
+import { TemplateModelCloner, TransformerLoggerCategory } from "@itwin/core-transformer";
 import {
   BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps, IModel,
   PhysicalElementProps, Placement3d, SubCategoryAppearance,
@@ -123,16 +123,16 @@ describe("TemplateCloner", () => {
     categoryIds.forEach((categoryId: Id64String) => {
       cloner.context.remapElement(categoryId, categoryId); // map category of definition to category of instance - in this case the same
     });
-    templateIds.forEach((templateId: Id64String) => {
+    await Promise.all(templateIds.map(async (templateId: Id64String) => {
       const template = iModelDb.elements.getElement<TemplateRecipe3d>(templateId, TemplateRecipe3d);
       const templateName = template.code.value;
       const physicalModelId = PhysicalModel.insert(iModelDb, IModel.rootSubjectId, templateName);
       const physicalModel = iModelDb.models.getModel<PhysicalModel>(physicalModelId, PhysicalModel);
       const modelSelectorId = ModelSelector.insert(iModelDb, definitionModelId, templateName, [physicalModelId]);
-      cloner.placeTemplate3d(template.id, physicalModelId, new Placement3d(Point3d.createZero(), new YawPitchRollAngles(), Range3d.createNull()));
+      await cloner.placeTemplate3d(template.id, physicalModelId, new Placement3d(Point3d.createZero(), new YawPitchRollAngles(), Range3d.createNull()));
       const modelExtents = physicalModel.queryExtents();
       OrthographicViewDefinition.insert(iModelDb, definitionModelId, templateName, modelSelectorId, categorySelectorId, displayStyleId, modelExtents, StandardViewIndex.Iso);
-    });
+    }));
     iModelDb.close();
   });
 });
@@ -141,6 +141,7 @@ describe("TemplateCloner", () => {
  * @note It is a best practice is to use a namespace to ensure CodeSpec uniqueness.
  */
 enum CodeSpecName {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   DefinitionContainer = "ElectricalEquipment:DefinitionContainer",
   Equipment = "ElectricalEquipment:Equipment",
   EquipmentDefinition = "ElectricalEquipment:EquipmentDefinition",

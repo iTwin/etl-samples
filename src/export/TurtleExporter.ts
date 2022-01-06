@@ -2,22 +2,28 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
+
+/* eslint-disable id-blacklist */
+
 import { Id64, Id64String } from "@itwin/core-bentley";
 import {
   ECClass, NavigationProperty, PrimitiveProperty, PrimitiveType, Property, PropertyTypeUtils, RelationshipClass, Schema, SchemaItem, SchemaItemType,
   StrengthDirection,
 } from "@itwin/ecschema-metadata";
 import {
-  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelDb, IModelJsFs as fs, Model, Relationship,
+  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelJsFs as fs, IModelDb, Model, Relationship,
 } from "@itwin/core-backend";
 import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
 import { IModelSchemaLoader } from "@itwin/core-backend/lib/cjs/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 import { CodeSpec, RelatedElement } from "@itwin/core-common";
 
+// disable shadowing errors for enum names
+/* eslint-disable @typescript-eslint/no-shadow */
+
 /** Enumeration of RDF types.
  * @see https://www.w3.org/TR/rdf11-concepts/
  */
-enum rdf {
+enum Rdf {
   prefix = "rdf",
   iri = "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
   type = "rdf:type",
@@ -28,7 +34,7 @@ enum rdf {
 /** Enumeration of RDF Schema (RDFS) types.
  * @see https://www.w3.org/TR/rdf-schema/
  */
-enum rdfs {
+enum Rdfs {
   prefix = "rdfs",
   iri = "http://www.w3.org/2000/01/rdf-schema#",
   Class = "rdfs:Class",
@@ -43,7 +49,7 @@ enum rdfs {
 /** Enumeration of RDF-compatible XSD types.
  * @see https://www.w3.org/TR/rdf11-concepts/#dfn-rdf-compatible-xsd-types
  */
-enum xsd {
+enum Xsd {
   prefix = "xsd",
   iri = "http://www.w3.org/2001/XMLSchema#",
   base64Binary = "xsd:base64Binary",
@@ -59,7 +65,7 @@ enum xsd {
  * @note These names have not been finalized.
  * @beta
  */
-enum ec {
+enum Ec {
   prefix = "ec",
   iri = "http://www.example.org/ec#",
   Class = "ec:Class",
@@ -91,6 +97,8 @@ enum InstancePrefix {
   Relationship = "relationshipId",
 }
 
+/* eslint-enable @typescript-eslint/no-shadow */
+
 /** Exports iModel data to the Terse RDF Triple Language file format.
  * @see https://en.wikipedia.org/wiki/Turtle_(syntax)
  */
@@ -112,26 +120,26 @@ export class TurtleExporter extends IModelExportHandler {
     this.iModelExporter.wantGeometry = false;
   }
   /** Initiate the export */
-  public static export(iModelDb: IModelDb, outputFileName: string): void {
+  public static async export(iModelDb: IModelDb, outputFileName: string): Promise<void> {
     const handler = new TurtleExporter(iModelDb, outputFileName);
     handler.writeRdfPrefix();
     handler.writeRdfsPrefix();
     handler.writeXsdPrefix();
     handler.writeEcTypes();
-    handler.iModelExporter.exportSchemas();
+    await handler.iModelExporter.exportSchemas();
     handler.writeInstancePrefixes();
-    handler.iModelExporter.exportAll();
+    await handler.iModelExporter.exportAll();
   }
   /** Override of IModelExportHandler.onExportSchema */
   protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeSchema(schema);
-    super.onExportSchema(schema);
+    await super.onExportSchema(schema);
   }
   /** Override of IModelExportHandler.onExportCodeSpec */
   protected override onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
     const codeSpecClassRdfName = this.formatSchemaItemFullName("BisCore:CodeSpec");
     const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
-    this.writeTriple(codeSpecInstanceRdfName, rdf.type, codeSpecClassRdfName);
+    this.writeTriple(codeSpecInstanceRdfName, Rdf.type, codeSpecClassRdfName);
     this.writeTriple(codeSpecInstanceRdfName, `${codeSpecClassRdfName}-Name`, JSON.stringify(codeSpec.name)); // use JSON.stringify to add surrounding quotes and escape special characters
     super.onExportCodeSpec(codeSpec, isUpdate);
   }
@@ -140,7 +148,7 @@ export class TurtleExporter extends IModelExportHandler {
     const elementClass: ECClass = this.tryGetECClass(element.classFullName)!;
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
-    this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
+    this.writeTriple(elementInstanceRdfName, Rdf.type, elementClassRdfName);
     if (element.code.value !== "") { // handle custom mapping of Code between TypeScript and ECSchema
       const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
@@ -155,7 +163,7 @@ export class TurtleExporter extends IModelExportHandler {
     const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
     const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
     const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
-    this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
+    this.writeTriple(aspectInstanceRdfName, Rdf.type, aspectClassRdfName);
     this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
     super.onExportElementUniqueAspect(aspect, isUpdate);
   }
@@ -165,7 +173,7 @@ export class TurtleExporter extends IModelExportHandler {
       const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
       const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
       const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
-      this.writeTriple(aspectInstanceRdfName, rdf.type, aspectClassRdfName);
+      this.writeTriple(aspectInstanceRdfName, Rdf.type, aspectClassRdfName);
       this.writeEntityInstanceProperties(aspect, aspectClass, aspectInstanceRdfName);
     }
     super.onExportElementMultiAspects(aspects);
@@ -175,7 +183,7 @@ export class TurtleExporter extends IModelExportHandler {
     const modelClass: ECClass = this.tryGetECClass(model.classFullName)!;
     const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
-    this.writeTriple(modelInstanceRdfName, rdf.type, modelClassRdfName);
+    this.writeTriple(modelInstanceRdfName, Rdf.type, modelClassRdfName);
     this.writeEntityInstanceProperties(model, modelClass, modelInstanceRdfName);
     super.onExportModel(model, isUpdate);
   }
@@ -184,9 +192,9 @@ export class TurtleExporter extends IModelExportHandler {
     const relationshipClass: ECClass = this.tryGetECClass(relationship.classFullName)!;
     const relationshipClassRdfName = this.formatSchemaItemFullName(relationship.classFullName);
     const relationshipInstanceRdfName = this.formatRelationshipInstanceId(relationship.id);
-    this.writeTriple(relationshipInstanceRdfName, rdf.type, relationshipClassRdfName);
-    this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Source`, this.formatElementInstanceId(relationship.sourceId));
-    this.writeTriple(relationshipInstanceRdfName, `${ec.RelationshipClass}-Target`, this.formatElementInstanceId(relationship.targetId));
+    this.writeTriple(relationshipInstanceRdfName, Rdf.type, relationshipClassRdfName);
+    this.writeTriple(relationshipInstanceRdfName, `${Ec.RelationshipClass}-Source`, this.formatElementInstanceId(relationship.sourceId));
+    this.writeTriple(relationshipInstanceRdfName, `${Ec.RelationshipClass}-Target`, this.formatElementInstanceId(relationship.targetId));
     this.writeEntityInstanceProperties(relationship, relationshipClass, relationshipInstanceRdfName);
     super.onExportRelationship(relationship, isUpdate);
   }
@@ -197,13 +205,13 @@ export class TurtleExporter extends IModelExportHandler {
     this.writeTriple("@prefix", `${prefix}:`, `<${iri}>`);
   }
   private writeRdfPrefix(): void {
-    this.writePrefix(rdf.prefix, rdf.iri);
+    this.writePrefix(Rdf.prefix, Rdf.iri);
   }
   private writeRdfsPrefix(): void {
-    this.writePrefix(rdfs.prefix, rdfs.iri);
+    this.writePrefix(Rdfs.prefix, Rdfs.iri);
   }
   private writeXsdPrefix(): void {
-    this.writePrefix(xsd.prefix, xsd.iri);
+    this.writePrefix(Xsd.prefix, Xsd.iri);
   }
   public writeInstancePrefixes(): void {
     const basePrefix = `http://www.example.org/iModel/${this.sourceDb.iModelId}/`;
@@ -214,39 +222,39 @@ export class TurtleExporter extends IModelExportHandler {
     this.writePrefix(InstancePrefix.Relationship, `${basePrefix}relationship#`);
   }
   private writeEcTypes(): void {
-    this.writePrefix(ec.prefix, ec.iri);
+    this.writePrefix(Ec.prefix, Ec.iri);
     // rdfs:Class types
-    this.writeTriple(ec.Class, rdfs.subClassOf, rdfs.Class);
-    this.writeTriple(ec.EntityClass, rdfs.subClassOf, ec.Class);
-    this.writeTriple(ec.RelationshipClass, rdfs.subClassOf, ec.Class);
-    this.writeTriple(ec.CustomAttributeClass, rdfs.subClassOf, ec.Class);
-    this.writeTriple(ec.Mixin, rdfs.subClassOf, ec.Class);
-    this.writeTriple(ec.Enumeration, rdfs.subClassOf, rdfs.Class);
+    this.writeTriple(Ec.Class, Rdfs.subClassOf, Rdfs.Class);
+    this.writeTriple(Ec.EntityClass, Rdfs.subClassOf, Ec.Class);
+    this.writeTriple(Ec.RelationshipClass, Rdfs.subClassOf, Ec.Class);
+    this.writeTriple(Ec.CustomAttributeClass, Rdfs.subClassOf, Ec.Class);
+    this.writeTriple(Ec.Mixin, Rdfs.subClassOf, Ec.Class);
+    this.writeTriple(Ec.Enumeration, Rdfs.subClassOf, Rdfs.Class);
     // rdf.Property types
-    this.writePropertyTriples(ec.EntityClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the entity instance");
-    this.writePropertyTriples(ec.RelationshipClass, "Id", ec.PrimitiveProperty, ec.Id64String, "Id of the relationship instance");
-    this.writePropertyTriples(ec.RelationshipClass, "Source", ec.NavigationProperty, ec.EntityClass, "The source of the relationship");
-    this.writePropertyTriples(ec.RelationshipClass, "Target", ec.NavigationProperty, ec.EntityClass, "The target of the relationship");
-    this.writeTriple(ec.Property, rdfs.subClassOf, rdf.Property);
-    this.writeTriple(ec.PrimitiveProperty, rdfs.subClassOf, ec.Property);
-    this.writeTriple(ec.PrimitiveArrayProperty, rdfs.subClassOf, ec.Property);
-    this.writeTriple(ec.StructProperty, rdfs.subClassOf, ec.Property);
-    this.writeTriple(ec.StructArrayProperty, rdfs.subClassOf, ec.Property);
-    this.writeTriple(ec.NavigationProperty, rdfs.subClassOf, ec.Property);
+    this.writePropertyTriples(Ec.EntityClass, "Id", Ec.PrimitiveProperty, Ec.Id64String, "Id of the entity instance");
+    this.writePropertyTriples(Ec.RelationshipClass, "Id", Ec.PrimitiveProperty, Ec.Id64String, "Id of the relationship instance");
+    this.writePropertyTriples(Ec.RelationshipClass, "Source", Ec.NavigationProperty, Ec.EntityClass, "The source of the relationship");
+    this.writePropertyTriples(Ec.RelationshipClass, "Target", Ec.NavigationProperty, Ec.EntityClass, "The target of the relationship");
+    this.writeTriple(Ec.Property, Rdfs.subClassOf, Rdf.Property);
+    this.writeTriple(Ec.PrimitiveProperty, Rdfs.subClassOf, Ec.Property);
+    this.writeTriple(Ec.PrimitiveArrayProperty, Rdfs.subClassOf, Ec.Property);
+    this.writeTriple(Ec.StructProperty, Rdfs.subClassOf, Ec.Property);
+    this.writeTriple(Ec.StructArrayProperty, Rdfs.subClassOf, Ec.Property);
+    this.writeTriple(Ec.NavigationProperty, Rdfs.subClassOf, Ec.Property);
     // primitive types
-    this.writeTriple(ec.GuidString, rdfs.subClassOf, xsd.string);
-    this.writeTriple(ec.Id64String, rdfs.subClassOf, xsd.string);
-    this.writeTriple(ec.JsonString, rdfs.subClassOf, xsd.string);
-    this.writeTriple(ec.Point2d, rdfs.subClassOf, ec.JsonString);
-    this.writeTriple(ec.Point3d, rdfs.subClassOf, ec.JsonString);
+    this.writeTriple(Ec.GuidString, Rdfs.subClassOf, Xsd.string);
+    this.writeTriple(Ec.Id64String, Rdfs.subClassOf, Xsd.string);
+    this.writeTriple(Ec.JsonString, Rdfs.subClassOf, Xsd.string);
+    this.writeTriple(Ec.Point2d, Rdfs.subClassOf, Ec.JsonString);
+    this.writeTriple(Ec.Point3d, Rdfs.subClassOf, Ec.JsonString);
     // write consistent labels for each "ec" enum member
-    Object.keys(ec).forEach((key) => this.writeLabel(`ec:${key}`));
+    Object.keys(Ec).forEach((key) => this.writeLabel(`ec:${key}`));
   }
   public writeLabel(rdfName: string, label: string = rdfName): void {
-    this.writeTriple(rdfName, rdfs.label, JSON.stringify(label)); // use JSON.stringify to add surrounding quotes and escape special characters
+    this.writeTriple(rdfName, Rdfs.label, JSON.stringify(label)); // use JSON.stringify to add surrounding quotes and escape special characters
   }
   public writeComment(rdfName: string, comment: string): void {
-    this.writeTriple(rdfName, rdfs.comment, JSON.stringify(comment)); // use JSON.stringify to add surrounding quotes and escape special characters
+    this.writeTriple(rdfName, Rdfs.comment, JSON.stringify(comment)); // use JSON.stringify to add surrounding quotes and escape special characters
   }
   public writeSchema(schema: Schema): void {
     this.writePrefix(schema.alias, `http://www.example.org/schemas/${schema.schemaKey}#`);
@@ -255,7 +263,7 @@ export class TurtleExporter extends IModelExportHandler {
         this.writeClass(item);
       } else if (SchemaItemType.Enumeration === item.schemaItemType) {
         const enumerationRdfName = this.formatSchemaItem(item);
-        this.writeTriple(enumerationRdfName, rdfs.subClassOf, ec.Enumeration);
+        this.writeTriple(enumerationRdfName, Rdfs.subClassOf, Ec.Enumeration);
         this.writeLabel(enumerationRdfName);
       }
     }
@@ -267,23 +275,23 @@ export class TurtleExporter extends IModelExportHandler {
     const classRdfName = this.formatSchemaItem(c);
     const baseClass: ECClass | undefined = c.getBaseClassSync();
     if (baseClass) {
-      this.writeTriple(classRdfName, rdfs.subClassOf, `${this.formatSchemaItem(baseClass)}`);
+      this.writeTriple(classRdfName, Rdfs.subClassOf, `${this.formatSchemaItem(baseClass)}`);
     } else {
       switch (c.schemaItemType) {
         case SchemaItemType.CustomAttributeClass:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.CustomAttributeClass);
+          this.writeTriple(classRdfName, Rdfs.subClassOf, Ec.CustomAttributeClass);
           break;
         case SchemaItemType.EntityClass:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.EntityClass);
+          this.writeTriple(classRdfName, Rdfs.subClassOf, Ec.EntityClass);
           break;
         case SchemaItemType.Enumeration:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.Enumeration);
+          this.writeTriple(classRdfName, Rdfs.subClassOf, Ec.Enumeration);
           break;
         case SchemaItemType.Mixin:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.Mixin);
+          this.writeTriple(classRdfName, Rdfs.subClassOf, Ec.Mixin);
           break;
         case SchemaItemType.RelationshipClass:
-          this.writeTriple(classRdfName, rdfs.subClassOf, ec.RelationshipClass);
+          this.writeTriple(classRdfName, Rdfs.subClassOf, Ec.RelationshipClass);
           break;
         default:
           throw new Error("Unexpected class type");
@@ -341,22 +349,22 @@ export class TurtleExporter extends IModelExportHandler {
   public writeProperty(classRdfName: string, property: Property): void {
     if (property.isArray()) {
       if (property.isPrimitive()) {
-        this.writePropertyTriples(classRdfName, property.name, ec.PrimitiveArrayProperty, rdf.List, property.description);
+        this.writePropertyTriples(classRdfName, property.name, Ec.PrimitiveArrayProperty, Rdf.List, property.description);
       } else {
-        this.writePropertyTriples(classRdfName, property.name, ec.StructArrayProperty, rdf.List, property.description);
+        this.writePropertyTriples(classRdfName, property.name, Ec.StructArrayProperty, Rdf.List, property.description);
       }
     } else {
       if (property.isEnumeration()) {
         if (property.enumeration?.fullName) {
           const propertyRange = this.formatSchemaItemFullName(property.enumeration.fullName);
-          this.writePropertyTriples(classRdfName, property.name, ec.PrimitiveProperty, propertyRange, property.description);
+          this.writePropertyTriples(classRdfName, property.name, Ec.PrimitiveProperty, propertyRange, property.description);
         } else if (property.isPrimitive()) {
           this.writePrimitiveProperty(classRdfName, property);
         }
       } else if (property.isNavigation()) {
         this.writeNavigationProperty(classRdfName, property);
       } else if (property.isStruct()) {
-        this.writePropertyTriples(classRdfName, property.name, ec.StructProperty, undefined, property.description);
+        this.writePropertyTriples(classRdfName, property.name, Ec.StructProperty, undefined, property.description);
       } else if (property.isPrimitive()) {
         this.writePrimitiveProperty(classRdfName, property);
       }
@@ -364,7 +372,7 @@ export class TurtleExporter extends IModelExportHandler {
   }
   private writeNavigationProperty(classRdfName: string, property: NavigationProperty): void {
     const relationshipClass = this.tryGetECClass(property.relationshipClass.fullName)! as RelationshipClass;
-    let constraintClassRdfName: string = ec.EntityClass;
+    let constraintClassRdfName: string = Ec.EntityClass;
     switch (property.direction) {
       case StrengthDirection.Forward:
         if (relationshipClass.target.constraintClasses) {
@@ -377,51 +385,51 @@ export class TurtleExporter extends IModelExportHandler {
         }
         break;
     }
-    this.writePropertyTriples(classRdfName, property.name, ec.NavigationProperty, constraintClassRdfName, property.description);
+    this.writePropertyTriples(classRdfName, property.name, Ec.NavigationProperty, constraintClassRdfName, property.description);
   }
   private writePrimitiveProperty(classRdfName: string, property: PrimitiveProperty): void {
     let propertyRange: string;
     switch (PropertyTypeUtils.getPrimitiveType(property.propertyType)) {
       case PrimitiveType.Binary:
-        propertyRange = xsd.base64Binary;
+        propertyRange = Xsd.base64Binary;
         if (property.extendedTypeName) {
           switch (property.extendedTypeName.toLocaleLowerCase()) {
             case "beguid": // cspell:ignore BeGuid
-              propertyRange = ec.GuidString;
+              propertyRange = Ec.GuidString;
               break;
           }
         }
         break;
       case PrimitiveType.Boolean:
-        propertyRange = xsd.boolean;
+        propertyRange = Xsd.boolean;
         break;
       case PrimitiveType.DateTime:
-        propertyRange = xsd.dateTime;
+        propertyRange = Xsd.dateTime;
         break;
       case PrimitiveType.Double:
-        propertyRange = xsd.double;
+        propertyRange = Xsd.double;
         break;
       case PrimitiveType.IGeometry:
-        propertyRange = ec.IGeometry;
+        propertyRange = Ec.IGeometry;
         break;
       case PrimitiveType.Integer:
-        propertyRange = xsd.integer;
+        propertyRange = Xsd.integer;
         break;
       case PrimitiveType.Long:
-        propertyRange = xsd.long;
+        propertyRange = Xsd.long;
         break;
       case PrimitiveType.Point2d:
-        propertyRange = ec.Point2d;
+        propertyRange = Ec.Point2d;
         break;
       case PrimitiveType.Point3d:
-        propertyRange = ec.Point3d;
+        propertyRange = Ec.Point3d;
         break;
       case PrimitiveType.String:
-        propertyRange = xsd.string;
+        propertyRange = Xsd.string;
         if (property.extendedTypeName) {
           switch (property.extendedTypeName.toLocaleLowerCase()) {
             case "json":
-              propertyRange = ec.JsonString;
+              propertyRange = Ec.JsonString;
               break;
           }
         }
@@ -429,16 +437,16 @@ export class TurtleExporter extends IModelExportHandler {
       default:
         throw new Error("Unexpected PrimitiveType");
     }
-    this.writePropertyTriples(classRdfName, property.name, ec.PrimitiveProperty, propertyRange, property.description);
+    this.writePropertyTriples(classRdfName, property.name, Ec.PrimitiveProperty, propertyRange, property.description);
   }
   private writePropertyTriples(classRdfName: string, propertyName: string, subClassOf: string, range: string | undefined, comment?: string): void {
     const propertyRdfName = `${classRdfName}-${propertyName}`;
     const propertyLabel = `${classRdfName}.${propertyName}`;
     this.writeLabel(propertyRdfName, propertyLabel);
-    this.writeTriple(propertyRdfName, rdfs.subClassOf, subClassOf);
-    this.writeTriple(propertyRdfName, rdfs.domain, classRdfName);
+    this.writeTriple(propertyRdfName, Rdfs.subClassOf, subClassOf);
+    this.writeTriple(propertyRdfName, Rdfs.domain, classRdfName);
     if (range) {
-      this.writeTriple(propertyRdfName, rdfs.range, range);
+      this.writeTriple(propertyRdfName, Rdfs.range, range);
     }
     if (comment) {
       this.writeComment(propertyRdfName, comment);

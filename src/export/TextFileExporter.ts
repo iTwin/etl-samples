@@ -29,11 +29,11 @@ export class TextFileExporter extends IModelExportHandler {
   }
 
   /** Initiate the export */
-  public static export(iModelDb: IModelDb, outputFileName: string): void {
+  public static async export(iModelDb: IModelDb, outputFileName: string): Promise<void> {
     const handler = new TextFileExporter(iModelDb, outputFileName);
-    handler.iModelExporter.exportSchemas();
+    await handler.iModelExporter.exportSchemas();
     handler.writeSeparator();
-    handler.iModelExporter.exportAll();
+    await handler.iModelExporter.exportAll();
   }
 
   /** Write a line to the output file. */
@@ -50,7 +50,7 @@ export class TextFileExporter extends IModelExportHandler {
   /** Override of IModelExportHandler.onExportSchema */
   protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`[Schema] ${schema.name}`);
-    super.onExportSchema(schema);
+    await super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportCodeSpec */

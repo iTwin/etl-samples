@@ -16,13 +16,13 @@ describe("CodeExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it("exportCodes", () => {
+  it("exportCodes", async () => {
     const outputFileName = TestUtils.initOutputFile("CodeExporter.csv");
     const iModelFileName = TestUtils.initOutputFile("CodeExporter.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "CodeExporter Test" }, createClassViews: true });
     SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory1", {});
     SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory2", {});
-    CodeExporter.exportCodes(iModelDb, outputFileName);
+    await CodeExporter.exportCodes(iModelDb, outputFileName);
     iModelDb.close();
   });
 });

@@ -16,13 +16,13 @@ describe("TextFileExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it("export", () => {
+  it("export", async () => {
     const outputFileName = TestUtils.initOutputFile("TextFileExporter.txt");
     const iModelFileName = TestUtils.initOutputFile("TextFileExporter.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "TextFileExporter Test" }, createClassViews: true });
     SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory1", {});
     SpatialCategory.insert(iModelDb, IModel.dictionaryId, "SpatialCategory2", {});
-    TextFileExporter.export(iModelDb, outputFileName);
+    await TextFileExporter.export(iModelDb, outputFileName);
     iModelDb.close();
   });
 });

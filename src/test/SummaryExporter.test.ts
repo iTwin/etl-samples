@@ -15,11 +15,11 @@ describe("SummaryExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it("export", () => {
+  it("export", async () => {
     const outputFileName = TestUtils.initOutputFile("SummaryExporter.txt");
     const iModelFileName = TestUtils.initOutputFile("SummaryExporter.bim");
     const iModelDb = SnapshotDb.createEmpty(iModelFileName, { rootSubject: { name: "SummaryExporter Test" }, createClassViews: true });
-    SummaryExporter.export(iModelDb, outputFileName);
+    await SummaryExporter.export(iModelDb, outputFileName);
     iModelDb.close();
   });
 });

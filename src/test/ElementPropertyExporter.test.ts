@@ -23,11 +23,11 @@ describe("ElementPropertyExporter", () => {
     await IModelHost.shutdown();
   });
 
-  it.skip("should export element properties", () => {
+  it.skip("should export element properties", async () => {
     const outputFileName = TestUtils.initOutputFile("ElementPropertyExporter.json");
     const iModelFileName = ""; // NOTE: replace with path to snapshot iModel
     const iModelDb = SnapshotDb.openFile(iModelFileName);
-    ElementPropertyExporter.export(iModelDb, outputFileName);
+    await ElementPropertyExporter.export(iModelDb, outputFileName);
     iModelDb.close();
   });
 });

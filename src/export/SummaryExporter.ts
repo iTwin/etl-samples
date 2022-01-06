@@ -31,18 +31,18 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Initiate the export */
-  public static export(iModelDb: IModelDb, outputFileName: string): void {
+  public static async export(iModelDb: IModelDb, outputFileName: string): Promise<void> {
     const handler = new SummaryExporter(iModelDb, outputFileName);
     handler.iModelExporter.visitElements = true;
     handler.iModelExporter.visitRelationships = false;
     handler.iModelExporter.wantGeometry = false;
     handler.writeSectionHeader("Schemas");
-    handler.iModelExporter.exportSchemas();
+    await handler.iModelExporter.exportSchemas();
     handler.writeClassCounts();
     handler.writeSectionHeader("RepositoryModel");
-    handler.iModelExporter.exportElement(IModel.rootSubjectId); // Get Subject/Partition hierarchy from RepositoryModel
+    await handler.iModelExporter.exportElement(IModel.rootSubjectId); // Get Subject/Partition hierarchy from RepositoryModel
     handler.iModelExporter.visitElements = false; // Only want element detail for the RepositoryModel
-    handler.iModelExporter.exportAll();
+    await handler.iModelExporter.exportAll();
   }
 
   /** Write a line to the output file. */
@@ -91,7 +91,7 @@ export class SummaryExporter extends IModelExportHandler {
   /** Override of IModelExportHandler.onExportSchema */
   protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`${schema.name}, version=${schema.schemaKey.version}`);
-    super.onExportSchema(schema);
+    await super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportModel */

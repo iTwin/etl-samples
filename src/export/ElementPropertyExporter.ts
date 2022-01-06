@@ -14,10 +14,10 @@ export class ElementPropertyExporter extends IModelExportHandler {
   public iModelExporter: IModelExporter;
 
   /** Initiate the export of codes. */
-  public static export(iModelDb: IModelDb, outputFileName: string): void {
+  public static async export(iModelDb: IModelDb, outputFileName: string): Promise<void> {
     const handler = new ElementPropertyExporter(iModelDb, outputFileName);
     handler.writeFileHeader();
-    handler.iModelExporter.exportAll();
+    await handler.iModelExporter.exportAll();
     handler.writeFileFooter();
   }
 
