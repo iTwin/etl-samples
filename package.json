@@ -10,7 +10,7 @@
     "clean": "rimraf lib",
     "copy:test-assets": "cpx \"./src/test/assets/**/*\" ./lib/test/assets",
     "lint": "eslint -f visualstudio \"./src/**/*.ts\" 1>&2",
-    "test": "betools test"
+    "test": "mocha lib/test"
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,7 @@
     "@itwin/eslint-plugin": "rc",
     "@types/chai": "^4.2.12",
     "@types/mocha": "^5.2.7",
+    "chai": "^4.3.4",
     "cpx": "^1.5.0",
     "eslint": "^7.11.0",
     "mocha": "^5.2.0",
@@ -39,18 +40,18 @@
   },
   "dependencies": {
     "@bentley/backend-itwin-client": "^2.10.0",
-    "@itwin/core-bentley": "rc",
-    "@itwin/ecschema-metadata": "rc",
-    "@itwin/browser-authorization": "latest",
-    "@itwin/core-geometry": "rc",
     "@bentley/imodelhub-client": "^2.10.0",
-    "@itwin/core-backend": "rc",
-    "@itwin/core-transformer": "rc",
-    "@itwin/core-common": "rc",
-    "@itwin/core-i18n": "rc",
     "@bentley/itwin-client": "^2.10.0",
     "@bentley/rbac-client": "^2.10.0",
-    "@bentley/telemetry-client": "^2.10.0"
+    "@bentley/telemetry-client": "^2.10.0",
+    "@itwin/browser-authorization": "latest",
+    "@itwin/core-backend": "rc",
+    "@itwin/core-bentley": "rc",
+    "@itwin/core-common": "rc",
+    "@itwin/core-geometry": "rc",
+    "@itwin/core-i18n": "rc",
+    "@itwin/core-transformer": "rc",
+    "@itwin/ecschema-metadata": "rc"
   },
   "eslintConfig": {
     "plugins": [
