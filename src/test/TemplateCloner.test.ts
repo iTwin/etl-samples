@@ -280,7 +280,7 @@ class StandardDefinitionManager {
   }
 
   /** Insert a TemplateRecipe2d and its sub-DrawingModel
-   * @note Should use TemplateRecipe2d.insert when it is added to @bentley/imodeljs-backend
+   * @note Should use TemplateRecipe2d.insert when it is added to @bentley/core-transformer
    */
   public insertTemplateRecipe2d(containerId: Id64String, recipeName: string): Id64String {
     const codeSpec = this.iModelDb.codeSpecs.getByName(BisCodeSpec.templateRecipe2d);
@@ -479,7 +479,7 @@ class EquipmentPlacer extends TemplateModelCloner {
         });
       }
     }
-    // WIP: waiting for missing @bentley/imodeljs-backend placeTemplate2d API
+    // WIP: waiting for missing @bentley/core-transformer placeTemplate2d API
     // create the DrawingGraphic by cloning/placing a template
     // const drawingTemplateSql = "SELECT TargetECInstanceId FROM ElectricalEquipment:EquipmentDefinitionSpecifiesDrawingRecipe WHERE SourceECInstanceId=:sourceId";
     // const drawingTemplateId = this.sourceDb.withPreparedStatement(drawingTemplateSql, (statement: ECSqlStatement) => {
