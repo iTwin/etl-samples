@@ -3,7 +3,8 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { Id64String } from "@itwin/core-bentley";
-import { Element, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs } from "@itwin/core-backend";
+import { Element, IModelDb, IModelJsFs } from "@itwin/core-backend";
+import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
 import { CodeSpec, IModel } from "@itwin/core-common";
 
 /** CodeExporter creates a CSV output file containing all Codes from the specified iModel. */
@@ -31,8 +32,19 @@ export class CodeExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement that outputs a line of a CSV file when the Element has a Code. */
-  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
-    const codeValue: string = element.code.getValue();
+  // FIXME: must be marked public
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  ///////////////////////////////////////////
+  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
+    const codeValue: string = element.code.value;
     if ("" !== codeValue) { // only output when Element has a Code
       const codeSpec: CodeSpec = element.iModel.codeSpecs.getById(element.code.spec);
       const codeScopePath: string = this.buildCodeScopePath(element);

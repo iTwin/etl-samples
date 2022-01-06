@@ -6,9 +6,10 @@
 import { DbResult, Id64String } from "@itwin/core-bentley";
 import { Schema } from "@itwin/ecschema-metadata";
 import {
-  ECSqlStatement, Element, GeometricElement2d, GeometricElement3d, GeometricModel2d, GeometricModel3d, IModelDb, IModelExporter, IModelExportHandler,
+  ECSqlStatement, Element, GeometricElement2d, GeometricElement3d, GeometricModel2d, GeometricModel3d, IModelDb,
   IModelJsFs, InformationPartitionElement, Model,
 } from "@itwin/core-backend";
+import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
 import { IModel } from "@itwin/core-common";
 
 /** Exports a summary of the iModel contents to an output text file. */
@@ -88,13 +89,13 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportSchema */
-  protected onExportSchema(schema: Schema): void {
+  protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`${schema.name}, version=${schema.schemaKey.version}`);
     super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportModel */
-  protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  protected override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     this.writeSectionHeader(`Model: ${model.classFullName}, id=${model.id}, "${model.name}"`);
     const sourceDb = this.iModelExporter.sourceDb;
     // output bis:Element count
@@ -126,7 +127,7 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement */
-  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     if (!(element instanceof InformationPartitionElement)) {
       const indent = (level: number): string => {
         let indentString = "";

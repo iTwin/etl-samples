@@ -13,6 +13,7 @@ specifiers:
   '@itwin/core-common': rc
   '@itwin/core-geometry': rc
   '@itwin/core-i18n': rc
+  '@itwin/core-transformer': rc
   '@itwin/ecschema-metadata': rc
   '@types/chai': ^4.2.12
   '@types/mocha': ^5.2.7
@@ -21,7 +22,7 @@ specifiers:
   rimraf: ^3.0.2
   tslint: ^5.11.0
   tslint-etc: ^1.13.6
-  typescript: ~3.7.4
+  typescript: ^4.4.1
 
 dependencies:
   '@bentley/backend-itwin-client': 2.19.27_b2ad17acf22fd4e9d43a74ab6f2377bf
@@ -35,6 +36,7 @@ dependencies:
   '@itwin/core-common': 3.0.0-dev.148_2cea9fa5747d2125eec0388ef83db838
   '@itwin/core-geometry': 3.0.0-dev.148
   '@itwin/core-i18n': 3.0.0-dev.148_1f1133e0683841193b047e5518caa238
+  '@itwin/core-transformer': 3.0.0-dev.148_e398fc94665e8c27c533e70ed57cb23f
   '@itwin/ecschema-metadata': 3.0.0-dev.148_1f1133e0683841193b047e5518caa238
 
 devDependencies:
@@ -44,9 +46,9 @@ devDependencies:
   cpx: 1.5.0
   mocha: 5.2.0
   rimraf: 3.0.2
-  tslint: 5.20.1_typescript@3.7.7
-  tslint-etc: 1.13.10_tslint@5.20.1+typescript@3.7.7
-  typescript: 3.7.7
+  tslint: 5.20.1_typescript@4.4.4
+  tslint-etc: 1.13.10_tslint@5.20.1+typescript@4.4.4
+  typescript: 4.4.4
 
 packages:
 
@@ -385,6 +387,26 @@ packages:
       - '@itwin/core-geometry'
     dev: false
 
+  /@itwin/core-transformer/3.0.0-dev.148_e398fc94665e8c27c533e70ed57cb23f:
+    resolution: {integrity: sha512-x2K60+9TS6FZnWBrD14ZfsvXzdnouNeHIfxTBdo51Op9YahK2mZ+5BcYmKoQ9RSIUSmgnTb27eQRYIlliBVUpQ==}
+    engines: {node: '>=12.22.0 < 14.0 || >=14.17.0 <17.0'}
+    peerDependencies:
+      '@bentley/itwin-client': ^3.0.0-dev.148
+      '@itwin/core-backend': ^3.0.0-dev.148
+      '@itwin/core-bentley': ^3.0.0-dev.148
+      '@itwin/core-common': ^3.0.0-dev.148
+      '@itwin/core-geometry': ^3.0.0-dev.148
+      '@itwin/ecschema-metadata': ^3.0.0-dev.148
+    dependencies:
+      '@bentley/itwin-client': 2.19.27
+      '@itwin/core-backend': 3.0.0-dev.148_5f1f43871f480562b3cac07d0b281763
+      '@itwin/core-bentley': 3.0.0-dev.148
+      '@itwin/core-common': 3.0.0-dev.148_2cea9fa5747d2125eec0388ef83db838
+      '@itwin/core-geometry': 3.0.0-dev.148
+      '@itwin/ecschema-metadata': 3.0.0-dev.148_1f1133e0683841193b047e5518caa238
+      semver: 5.7.1
+    dev: false
+
   /@itwin/ecschema-metadata/3.0.0-dev.148_1f1133e0683841193b047e5518caa238:
     resolution: {integrity: sha512-X/9ELuAwgIw9roE5kAL7wpWSOT8j/oWX1vT1hdkogS1iHdxk5RRFffrVhVVYTjnXJbkVrMmSGlGEDBN51DDnTA==}
     peerDependencies:
@@ -450,13 +472,13 @@ packages:
     engines: {node: '>=10.13.0'}
     dev: false
 
-  /@phenomnomnominal/tsquery/4.1.1_typescript@3.7.7:
+  /@phenomnomnominal/tsquery/4.1.1_typescript@4.4.4:
     resolution: {integrity: sha512-jjMmK1tnZbm1Jq5a7fBliM4gQwjxMU7TFoRNwIyzwlO+eHPRCFv/Nv+H/Gi1jc3WR7QURG8D5d0Tn12YGrUqBQ==}
     peerDependencies:
       typescript: ^3 || ^4
     dependencies:
       esquery: 1.4.0
-      typescript: 3.7.7
+      typescript: 4.4.4
     dev: true
 
   /@sindresorhus/is/0.14.0:
@@ -3316,21 +3338,21 @@ packages:
   /tslib/2.3.1:
     resolution: {integrity: sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==}
 
-  /tslint-etc/1.13.10_tslint@5.20.1+typescript@3.7.7:
+  /tslint-etc/1.13.10_tslint@5.20.1+typescript@4.4.4:
     resolution: {integrity: sha512-6Rt6zaE9jw4iBkrnpVTlnbnjax/4LyTRrXkm/+nLuuJ6HQzZ/+TmHDAtA6C/VOkSqeOHRXCIen3B38hmIMlxow==}
     peerDependencies:
       tslint: ^5.0.0 || ^6.0.0
       typescript: ^2.3.0 || ^3.0.0 || ^4.0.0
     dependencies:
-      '@phenomnomnominal/tsquery': 4.1.1_typescript@3.7.7
+      '@phenomnomnominal/tsquery': 4.1.1_typescript@4.4.4
       tslib: 2.3.1
-      tslint: 5.20.1_typescript@3.7.7
-      tsutils: 3.21.0_typescript@3.7.7
-      tsutils-etc: 1.4.1_tsutils@3.21.0+typescript@3.7.7
-      typescript: 3.7.7
+      tslint: 5.20.1_typescript@4.4.4
+      tsutils: 3.21.0_typescript@4.4.4
+      tsutils-etc: 1.4.1_tsutils@3.21.0+typescript@4.4.4
+      typescript: 4.4.4
     dev: true
 
-  /tslint/5.20.1_typescript@3.7.7:
+  /tslint/5.20.1_typescript@4.4.4:
     resolution: {integrity: sha512-EcMxhzCFt8k+/UP5r8waCf/lzmeSyVlqxqMEDQE7rWYiQky8KpIBz1JAoYXfROHrPZ1XXd43q8yQnULOLiBRQg==}
     engines: {node: '>=4.8.0'}
     hasBin: true
@@ -3349,11 +3371,11 @@ packages:
       resolve: 1.21.0
       semver: 5.7.1
       tslib: 1.14.1
-      tsutils: 2.29.0_typescript@3.7.7
-      typescript: 3.7.7
+      tsutils: 2.29.0_typescript@4.4.4
+      typescript: 4.4.4
     dev: true
 
-  /tsutils-etc/1.4.1_tsutils@3.21.0+typescript@3.7.7:
+  /tsutils-etc/1.4.1_tsutils@3.21.0+typescript@4.4.4:
     resolution: {integrity: sha512-6UPYgc7OXcIW5tFxlsZF3OVSBvDInl/BkS3Xsu64YITXk7WrnWTVByKWPCThFDBp5gl5IGHOzGMdQuDCE7OL4g==}
     hasBin: true
     peerDependencies:
@@ -3361,28 +3383,28 @@ packages:
       typescript: ^4.0.0
     dependencies:
       '@types/yargs': 17.0.8
-      tsutils: 3.21.0_typescript@3.7.7
-      typescript: 3.7.7
+      tsutils: 3.21.0_typescript@4.4.4
+      typescript: 4.4.4
       yargs: 17.3.1
     dev: true
 
-  /tsutils/2.29.0_typescript@3.7.7:
+  /tsutils/2.29.0_typescript@4.4.4:
     resolution: {integrity: sha512-g5JVHCIJwzfISaXpXE1qvNalca5Jwob6FjI4AoPlqMusJ6ftFE7IkkFoMhVLRgK+4Kx3gkzb8UZK5t5yTTvEmA==}
     peerDependencies:
       typescript: '>=2.1.0 || >=2.1.0-dev || >=2.2.0-dev || >=2.3.0-dev || >=2.4.0-dev || >=2.5.0-dev || >=2.6.0-dev || >=2.7.0-dev || >=2.8.0-dev || >=2.9.0-dev || >= 3.0.0-dev || >= 3.1.0-dev'
     dependencies:
       tslib: 1.14.1
-      typescript: 3.7.7
+      typescript: 4.4.4
     dev: true
 
-  /tsutils/3.21.0_typescript@3.7.7:
+  /tsutils/3.21.0_typescript@4.4.4:
     resolution: {integrity: sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==}
     engines: {node: '>= 6'}
     peerDependencies:
       typescript: '>=2.8.0 || >= 3.2.0-dev || >= 3.3.0-dev || >= 3.4.0-dev || >= 3.5.0-dev || >= 3.6.0-dev || >= 3.6.0-beta || >= 3.7.0-dev || >= 3.7.0-beta'
     dependencies:
       tslib: 1.14.1
-      typescript: 3.7.7
+      typescript: 4.4.4
     dev: true
 
   /tunnel/0.0.6:
@@ -3411,12 +3433,6 @@ packages:
       minimatch: 3.0.4
       shiki: 0.9.15
       typescript: 4.4.4
-    dev: true
-
-  /typescript/3.7.7:
-    resolution: {integrity: sha512-MmQdgo/XenfZPvVLtKZOq9jQQvzaUAUpcKW8Z43x9B2fOm4S5g//tPtMweZUIP+SoBqrVPEIm+dJeQ9dfO0QdA==}
-    engines: {node: '>=4.2.0'}
-    hasBin: true
     dev: true
 
   /typescript/4.4.4:

@@ -4,8 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 import { Schema } from "@itwin/ecschema-metadata";
 import {
-  Element, ElementMultiAspect, ElementUniqueAspect, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs, Model, Relationship,
+  Element, ElementMultiAspect, ElementUniqueAspect, IModelDb, IModelJsFs, Model, Relationship,
 } from "@itwin/core-backend";
+import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
 import { CodeSpec, FontProps } from "@itwin/core-common";
 
 /** Exports a text summary of the iModel contents to an output text file. */
@@ -47,19 +48,19 @@ export class TextFileExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportSchema */
-  protected onExportSchema(schema: Schema): void {
+  protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`[Schema] ${schema.name}`);
     super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportCodeSpec */
-  protected onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
+  protected override onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
     this.writeLine(`[CodeSpec] codeSpecId=${codeSpec.id}, "${codeSpec.name}"`);
     super.onExportCodeSpec(codeSpec, isUpdate);
   }
 
   /** Override of IModelExportHandler.onExportFont */
-  protected onExportFont(font: FontProps, isUpdate: boolean | undefined): void {
+  protected override onExportFont(font: FontProps, isUpdate: boolean | undefined): void {
     if (this._firstFont) {
       this.writeSeparator();
       this._firstFont = false;
@@ -69,27 +70,27 @@ export class TextFileExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportModel */
-  protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  protected override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     this.writeSeparator();
     this.writeLine(`[Model] ${model.classFullName}, id=${model.id}, "${model.name}"`);
     super.onExportModel(model, isUpdate);
   }
 
   /** Override of IModelExportHandler.onExportElement */
-  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     const parentString = element.parent?.id ? `, parentId=${element.parent.id}` : "";
     this.writeLine(`[Element] ${element.classFullName}, id=${element.id}${parentString}, "${element.getDisplayLabel()}"`);
     super.onExportElement(element, isUpdate);
   }
 
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
-  protected onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
+  protected override onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
     this.writeLine(`[Aspect] ${aspect.classFullName}, id=${aspect.id}, elementId=${aspect.element.id}`);
     super.onExportElementUniqueAspect(aspect, isUpdate);
   }
 
   /** Override of IModelExportHandler.onExportElementMultiAspects */
-  protected onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
+  protected override onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
     for (const aspect of aspects) {
       this.writeLine(`[Aspect] ${aspect.classFullName}, id=${aspect.id}, elementId=${aspect.element.id}`);
     }
@@ -97,7 +98,7 @@ export class TextFileExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportRelationship */
-  protected onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
+  protected override onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
     if (this._firstRelationship) {
       this.writeSeparator();
       this._firstRelationship = false;

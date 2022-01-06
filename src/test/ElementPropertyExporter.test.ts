@@ -3,7 +3,8 @@ import { Logger, LogLevel } from "@itwin/core-bentley";
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { BackendLoggerCategory, IModelHost, SnapshotDb } from "@itwin/core-backend";
+import { IModelHost, SnapshotDb } from "@itwin/core-backend";
+import { TransformerLoggerCategory } from "@itwin/core-transformer";
 import { ElementPropertyExporter } from "../export/ElementPropertyExporter";
 import { TestUtils } from "./TestUtils";
 
@@ -14,7 +15,7 @@ describe("ElementPropertyExporter", () => {
     if (false) {
       Logger.initializeToConsole();
       Logger.setLevelDefault(LogLevel.Error);
-      Logger.setLevel(BackendLoggerCategory.IModelExporter, LogLevel.Trace);
+      Logger.setLevel(TransformerLoggerCategory.IModelExporter, LogLevel.Trace);
     }
   });
 

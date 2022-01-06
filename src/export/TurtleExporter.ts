@@ -8,9 +8,10 @@ import {
   StrengthDirection,
 } from "@itwin/ecschema-metadata";
 import {
-  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelDb, IModelExporter, IModelExportHandler, IModelJsFs as fs, Model, Relationship,
+  Element, ElementMultiAspect, ElementUniqueAspect, Entity, IModelDb, IModelJsFs as fs, Model, Relationship,
 } from "@itwin/core-backend";
-import { IModelSchemaLoader } from "@bentley/imodeljs-backend/lib/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
+import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
+import { IModelSchemaLoader } from "@itwin/core-backend/lib/cjs/IModelSchemaLoader"; // WIP: import from imodeljs-backend when available
 import { CodeSpec, RelatedElement } from "@itwin/core-common";
 
 /** Enumeration of RDF types.
@@ -122,12 +123,12 @@ export class TurtleExporter extends IModelExportHandler {
     handler.iModelExporter.exportAll();
   }
   /** Override of IModelExportHandler.onExportSchema */
-  protected onExportSchema(schema: Schema): void {
+  protected override async onExportSchema(schema: Schema): Promise<void> {
     this.writeSchema(schema);
     super.onExportSchema(schema);
   }
   /** Override of IModelExportHandler.onExportCodeSpec */
-  protected onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
+  protected override onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
     const codeSpecClassRdfName = this.formatSchemaItemFullName("BisCore:CodeSpec");
     const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
     this.writeTriple(codeSpecInstanceRdfName, rdf.type, codeSpecClassRdfName);
@@ -135,22 +136,22 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportCodeSpec(codeSpec, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElement */
-  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     const elementClass: ECClass = this.tryGetECClass(element.classFullName)!;
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
     this.writeTriple(elementInstanceRdfName, rdf.type, elementClassRdfName);
-    if (element.code.getValue() !== "") { // handle custom mapping of Code between TypeScript and ECSchema
+    if (element.code.value !== "") { // handle custom mapping of Code between TypeScript and ECSchema
       const elementBaseClassRdfName = this.formatSchemaItemFullName(Element.classFullName);
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeSpec`, this.formatCodeSpecInstanceId(element.code.spec));
       this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeScope`, this.formatElementInstanceId(element.code.scope));
-      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, JSON.stringify(element.code.getValue())); // use JSON.stringify to add surrounding quotes and escape special characters
+      this.writeTriple(elementInstanceRdfName, `${elementBaseClassRdfName}-CodeValue`, JSON.stringify(element.code.value)); // use JSON.stringify to add surrounding quotes and escape special characters
     }
     this.writeEntityInstanceProperties(element, elementClass, elementInstanceRdfName);
     super.onExportElement(element, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
-  protected onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
+  protected override onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
     const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
     const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
     const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
@@ -159,7 +160,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportElementUniqueAspect(aspect, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementMultiAspects */
-  protected onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
+  protected override onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
     for (const aspect of aspects) {
       const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
       const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
@@ -170,7 +171,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportElementMultiAspects(aspects);
   }
   /** Override of IModelExportHandler.onExportModel */
-  protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  protected override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     const modelClass: ECClass = this.tryGetECClass(model.classFullName)!;
     const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
@@ -179,7 +180,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportModel(model, isUpdate);
   }
   /** Override of IModelExportHandler.onExportRelationship */
-  protected onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
+  protected override onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
     const relationshipClass: ECClass = this.tryGetECClass(relationship.classFullName)!;
     const relationshipClassRdfName = this.formatSchemaItemFullName(relationship.classFullName);
     const relationshipInstanceRdfName = this.formatRelationshipInstanceId(relationship.id);

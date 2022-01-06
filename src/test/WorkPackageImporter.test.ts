@@ -7,7 +7,7 @@ import * as path from "path";
 import { DbResult } from "@itwin/core-bentley";
 import { Point3d, Range3d, YawPitchRollAngles } from "@itwin/core-geometry";
 import {
-  BackendRequestContext, ChannelRootAspect, DefinitionModel, ECSqlStatement, GroupModel, IModelHost, PhysicalElement, PhysicalModel, PhysicalObject,
+  ChannelRootAspect, DefinitionModel, ECSqlStatement, GroupModel, IModelHost, PhysicalElement, PhysicalModel, PhysicalObject,
   SnapshotDb, SpatialCategory, SubCategory, Subject,
 } from "@itwin/core-backend";
 import { Code, CodeScopeSpec, ColorDef, IModel, PhysicalElementProps, Placement3d, SubCategoryAppearance } from "@itwin/core-common";
@@ -32,7 +32,7 @@ describe("WorkPackageImporter", () => {
 
     // import schema utilized by this test
     const schemaFilePath = path.join(__dirname, "assets", "WorkPackaging.ecschema.xml");
-    await iModelDb.importSchemas(new BackendRequestContext(), [schemaFilePath]);
+    await iModelDb.importSchemas([schemaFilePath]);
     iModelDb.saveChanges("Schema imported");
 
     // create some sample physical data to simulate what an iModel Connector would normally do

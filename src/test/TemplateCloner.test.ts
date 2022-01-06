@@ -7,11 +7,12 @@ import * as path from "path";
 import { DbResult, Id64, Id64Array, Id64String, Logger, LogLevel } from "@itwin/core-bentley";
 import { Point2d, Point3d, Range3d, StandardViewIndex, YawPitchRollAngles } from "@itwin/core-geometry";
 import {
-  BackendLoggerCategory, BackendRequestContext, CategorySelector, DefinitionContainer, DefinitionElement, DefinitionModel, DisplayStyle3d,
+  CategorySelector, DefinitionContainer, DefinitionElement, DefinitionModel, DisplayStyle3d,
   DocumentListModel, Drawing, DrawingCategory, DrawingGraphic, DrawingModel, ECSqlStatement, ElementOwnsChildElements, FunctionalModel,
   FunctionalSchema, IModelDb, IModelHost, ModelSelector, OrthographicViewDefinition, PhysicalElement, PhysicalElementFulfillsFunction, PhysicalModel,
-  SnapshotDb, SpatialCategory, SpatialLocation, TemplateModelCloner, TemplateRecipe2d, TemplateRecipe3d,
+  SnapshotDb, SpatialCategory, SpatialLocation, TemplateRecipe2d, TemplateRecipe3d,
 } from "@itwin/core-backend";
+import { TransformerLoggerCategory, TemplateModelCloner } from "@itwin/core-transformer";
 import {
   BisCodeSpec, Code, CodeScopeSpec, DefinitionElementProps, GeometricElement2dProps, GeometricElement3dProps, GeometricModel2dProps, IModel,
   PhysicalElementProps, Placement3d, SubCategoryAppearance,
@@ -27,9 +28,9 @@ describe("TemplateCloner", () => {
     if (false) {
       Logger.initializeToConsole();
       Logger.setLevelDefault(LogLevel.Error);
-      Logger.setLevel(BackendLoggerCategory.IModelExporter, LogLevel.Trace);
-      Logger.setLevel(BackendLoggerCategory.IModelImporter, LogLevel.Trace);
-      Logger.setLevel(BackendLoggerCategory.IModelTransformer, LogLevel.Trace);
+      Logger.setLevel(TransformerLoggerCategory.IModelExporter, LogLevel.Trace);
+      Logger.setLevel(TransformerLoggerCategory.IModelImporter, LogLevel.Trace);
+      Logger.setLevel(TransformerLoggerCategory.IModelTransformer, LogLevel.Trace);
       Logger.setLevel(loggerCategory, LogLevel.Trace);
     }
   });
@@ -45,7 +46,7 @@ describe("TemplateCloner", () => {
     iModelDb.updateProjectExtents(projectExtents);
     const schemaFilePath = path.join(__dirname, "assets", "ElectricalEquipment.ecschema.xml");
     Logger.logInfo(loggerCategory, `${schemaFilePath}`);
-    await iModelDb.importSchemas(new BackendRequestContext(), [FunctionalSchema.schemaFilePath, schemaFilePath]);
+    await iModelDb.importSchemas([FunctionalSchema.schemaFilePath, schemaFilePath]);
     const definitionManager = new StandardDefinitionManager(iModelDb);
     definitionManager.ensureStandardDefinitions();
     const equipmentCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
@@ -70,15 +71,15 @@ describe("TemplateCloner", () => {
       Point3d.create(10, 20), Point3d.create(20, 20), Point3d.create(30, 20),
       Point3d.create(10, 30), Point3d.create(20, 30), Point3d.create(30, 30),
     ];
-    transformerOrigins.forEach((origin: Point3d, index: number) => {
+    await Promise.all(transformerOrigins.map(async (origin: Point3d, index: number) => {
       const placement = new Placement3d(origin, new YawPitchRollAngles(), new Range3d());
-      placer.placeEquipmentInstance(transformerDefinitionId, placement, `T-${index + 1}`);
-    });
+      await placer.placeEquipmentInstance(transformerDefinitionId, placement, `T-${index + 1}`);
+    }));
     const breakerOrigins = [Point3d.create(-10, 0), Point3d.create(-20, 0), Point3d.create(-30, 0)];
-    breakerOrigins.forEach((origin: Point3d, index: number) => {
+    await Promise.all(breakerOrigins.map(async (origin: Point3d, index: number) => {
       const placement = new Placement3d(origin, new YawPitchRollAngles(), new Range3d());
-      placer.placeEquipmentInstance(breakerDefinitionId, placement, `B-${index + 1}`);
-    });
+      await placer.placeEquipmentInstance(breakerDefinitionId, placement, `B-${index + 1}`);
+    }));
     const modelExtents = physicalModel.queryExtents();
     const modelSelectorId = ModelSelector.insert(iModelDb, IModel.dictionaryId, "SpatialModels", [physicalModelId]);
     assert.isTrue(Id64.isValidId64(modelSelectorId));
@@ -124,7 +125,7 @@ describe("TemplateCloner", () => {
     });
     templateIds.forEach((templateId: Id64String) => {
       const template = iModelDb.elements.getElement<TemplateRecipe3d>(templateId, TemplateRecipe3d);
-      const templateName = template.code.getValue();
+      const templateName = template.code.value;
       const physicalModelId = PhysicalModel.insert(iModelDb, IModel.rootSubjectId, templateName);
       const physicalModel = iModelDb.models.getModel<PhysicalModel>(physicalModelId, PhysicalModel);
       const modelSelectorId = ModelSelector.insert(iModelDb, definitionModelId, templateName, [physicalModelId]);
@@ -424,6 +425,7 @@ class EquipmentPlacer extends TemplateModelCloner {
   private _physicalModelId: Id64String;
   private _functionalModelId: Id64String;
   // private _drawingModelId: Id64String;
+
   public constructor(definitionManager: StandardDefinitionManager, physicalModelId: Id64String, functionalModelId: Id64String, _drawingModelId: Id64String) {
     super(definitionManager.iModelDb, definitionManager.iModelDb); // cloned Equipment instances will be in the same iModel as the EquipmentDefinition
     this._definitionManager = definitionManager;
@@ -433,7 +435,8 @@ class EquipmentPlacer extends TemplateModelCloner {
     const equipmentCategoryId = definitionManager.tryGetSpatialCategoryId(SpatialCategoryName.Equipment)!;
     this.context.remapElement(equipmentCategoryId, equipmentCategoryId); // map category of definition to category of instance - in this case the same
   }
-  public placeEquipmentInstance(equipmentDefinitionId: Id64String, placement: Placement3d, codeValue?: string): void {
+
+  public async placeEquipmentInstance(equipmentDefinitionId: Id64String, placement: Placement3d, codeValue?: string): Promise<void> {
     const equipmentDefinition = this.sourceDb.elements.getElement<DefinitionElement>(equipmentDefinitionId, DefinitionElement);
     const physicalTemplateSql = "SELECT TargetECInstanceId FROM ElectricalEquipment:EquipmentDefinitionSpecifiesPhysicalRecipe WHERE SourceECInstanceId=:sourceId";
     const physicalTemplateId = this.sourceDb.withPreparedStatement(physicalTemplateSql, (statement: ECSqlStatement) => {
@@ -443,7 +446,7 @@ class EquipmentPlacer extends TemplateModelCloner {
     // create the physical equipment by cloning/placing a template
     let physicalInstanceId: Id64String | undefined;
     if (physicalTemplateId) {
-      const idMap = super.placeTemplate3d(physicalTemplateId, this._physicalModelId, placement);
+      const idMap = await super.placeTemplate3d(physicalTemplateId, this._physicalModelId, placement);
       if (codeValue) {
         for (const clonedInstanceId of idMap.values()) {
           const clonedInstance = this.targetDb.elements.tryGetElement<PhysicalElement>(clonedInstanceId, PhysicalElement);
