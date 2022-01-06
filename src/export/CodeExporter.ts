@@ -32,18 +32,7 @@ export class CodeExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement that outputs a line of a CSV file when the Element has a Code. */
-  // FIXME: must be marked public
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  /// ////////////////////////////////////////
-  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  public override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     const codeValue: string = element.code.value;
     if ("" !== codeValue) { // only output when Element has a Code
       const codeSpec: CodeSpec = element.iModel.codeSpecs.getById(element.code.spec);

@@ -131,12 +131,12 @@ export class TurtleExporter extends IModelExportHandler {
     await handler.iModelExporter.exportAll();
   }
   /** Override of IModelExportHandler.onExportSchema */
-  protected override async onExportSchema(schema: Schema): Promise<void> {
+  public override async onExportSchema(schema: Schema): Promise<void> {
     this.writeSchema(schema);
     await super.onExportSchema(schema);
   }
   /** Override of IModelExportHandler.onExportCodeSpec */
-  protected override onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
+  public override onExportCodeSpec(codeSpec: CodeSpec, isUpdate: boolean | undefined): void {
     const codeSpecClassRdfName = this.formatSchemaItemFullName("BisCore:CodeSpec");
     const codeSpecInstanceRdfName = this.formatCodeSpecInstanceId(codeSpec.id);
     this.writeTriple(codeSpecInstanceRdfName, Rdf.type, codeSpecClassRdfName);
@@ -144,7 +144,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportCodeSpec(codeSpec, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElement */
-  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  public override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     const elementClass: ECClass = this.tryGetECClass(element.classFullName)!;
     const elementClassRdfName = this.formatSchemaItemFullName(element.classFullName);
     const elementInstanceRdfName = this.formatElementInstanceId(element.id);
@@ -159,7 +159,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportElement(element, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementUniqueAspect */
-  protected override onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
+  public override onExportElementUniqueAspect(aspect: ElementUniqueAspect, isUpdate: boolean | undefined): void {
     const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
     const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
     const aspectInstanceRdfName = this.formatAspectInstanceId(aspect.id);
@@ -168,7 +168,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportElementUniqueAspect(aspect, isUpdate);
   }
   /** Override of IModelExportHandler.onExportElementMultiAspects */
-  protected override onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
+  public override onExportElementMultiAspects(aspects: ElementMultiAspect[]): void {
     for (const aspect of aspects) {
       const aspectClass: ECClass = this.tryGetECClass(aspect.classFullName)!;
       const aspectClassRdfName = this.formatSchemaItemFullName(aspect.classFullName);
@@ -179,7 +179,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportElementMultiAspects(aspects);
   }
   /** Override of IModelExportHandler.onExportModel */
-  protected override onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  public override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     const modelClass: ECClass = this.tryGetECClass(model.classFullName)!;
     const modelClassRdfName = this.formatSchemaItemFullName(model.classFullName);
     const modelInstanceRdfName = this.formatModelInstanceId(model.id);
@@ -188,7 +188,7 @@ export class TurtleExporter extends IModelExportHandler {
     super.onExportModel(model, isUpdate);
   }
   /** Override of IModelExportHandler.onExportRelationship */
-  protected override onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
+  public override onExportRelationship(relationship: Relationship, isUpdate: boolean | undefined): void {
     const relationshipClass: ECClass = this.tryGetECClass(relationship.classFullName)!;
     const relationshipClassRdfName = this.formatSchemaItemFullName(relationship.classFullName);
     const relationshipInstanceRdfName = this.formatRelationshipInstanceId(relationship.id);

@@ -37,7 +37,7 @@ export class ElementPropertyExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement that outputs an export object per Element. */
-  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  public override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     if (element instanceof GeometricElement3d) { // only want to export physical elements and spatial locations
       this.writeExportProps(this.buildExportProps(element));
     }

@@ -89,13 +89,13 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportSchema */
-  protected override async onExportSchema(schema: Schema): Promise<void> {
+  public override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`${schema.name}, version=${schema.schemaKey.version}`);
     await super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportModel */
-  protected override onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  public override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     this.writeSectionHeader(`Model: ${model.classFullName}, id=${model.id}, "${model.name}"`);
     const sourceDb = this.iModelExporter.sourceDb;
     // output bis:Element count
@@ -127,7 +127,7 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement */
-  protected override onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  public override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     if (!(element instanceof InformationPartitionElement)) {
       const indent = (level: number): string => {
         let indentString = "";
