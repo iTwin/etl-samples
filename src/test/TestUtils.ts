@@ -4,9 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as path from "path";
-import { Arc3d, Box, Cone, LineString3d, Point2d, Point3d, PointString3d, Vector3d } from "@bentley/geometry-core";
-import { IModelJsFs as fs } from "@bentley/imodeljs-backend";
-import { GeometryStreamBuilder, GeometryStreamProps } from "@bentley/imodeljs-common";
+import { Arc3d, Box, Cone, LineString3d, Point2d, Point3d, PointString3d, Vector3d } from "@itwin/core-geometry";
+import { IModelJsFs as fs } from "@itwin/core-backend";
+import { GeometryStreamBuilder, GeometryStreamProps } from "@itwin/core-common";
 
 /** Test utilities */
 export class TestUtils {

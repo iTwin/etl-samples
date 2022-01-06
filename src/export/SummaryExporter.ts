@@ -3,13 +3,14 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 
-import { DbResult, Id64String } from "@bentley/bentleyjs-core";
-import { Schema } from "@bentley/ecschema-metadata";
+import { DbResult, Id64String } from "@itwin/core-bentley";
+import { Schema } from "@itwin/ecschema-metadata";
 import {
-  ECSqlStatement, Element, GeometricElement2d, GeometricElement3d, GeometricModel2d, GeometricModel3d, IModelDb, IModelExporter, IModelExportHandler,
+  ECSqlStatement, Element, GeometricElement2d, GeometricElement3d, GeometricModel2d, GeometricModel3d, IModelDb,
   IModelJsFs, InformationPartitionElement, Model,
-} from "@bentley/imodeljs-backend";
-import { IModel } from "@bentley/imodeljs-common";
+} from "@itwin/core-backend";
+import { IModelExporter, IModelExportHandler } from "@itwin/core-transformer";
+import { IModel } from "@itwin/core-common";
 
 /** Exports a summary of the iModel contents to an output text file. */
 export class SummaryExporter extends IModelExportHandler {
@@ -30,18 +31,18 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Initiate the export */
-  public static export(iModelDb: IModelDb, outputFileName: string): void {
+  public static async export(iModelDb: IModelDb, outputFileName: string): Promise<void> {
     const handler = new SummaryExporter(iModelDb, outputFileName);
     handler.iModelExporter.visitElements = true;
     handler.iModelExporter.visitRelationships = false;
     handler.iModelExporter.wantGeometry = false;
     handler.writeSectionHeader("Schemas");
-    handler.iModelExporter.exportSchemas();
+    await handler.iModelExporter.exportSchemas();
     handler.writeClassCounts();
     handler.writeSectionHeader("RepositoryModel");
-    handler.iModelExporter.exportElement(IModel.rootSubjectId); // Get Subject/Partition hierarchy from RepositoryModel
+    await handler.iModelExporter.exportElement(IModel.rootSubjectId); // Get Subject/Partition hierarchy from RepositoryModel
     handler.iModelExporter.visitElements = false; // Only want element detail for the RepositoryModel
-    handler.iModelExporter.exportAll();
+    await handler.iModelExporter.exportAll();
   }
 
   /** Write a line to the output file. */
@@ -88,13 +89,13 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportSchema */
-  protected onExportSchema(schema: Schema): void {
+  public override async onExportSchema(schema: Schema): Promise<void> {
     this.writeLine(`${schema.name}, version=${schema.schemaKey.version}`);
-    super.onExportSchema(schema);
+    await super.onExportSchema(schema);
   }
 
   /** Override of IModelExportHandler.onExportModel */
-  protected onExportModel(model: Model, isUpdate: boolean | undefined): void {
+  public override onExportModel(model: Model, isUpdate: boolean | undefined): void {
     this.writeSectionHeader(`Model: ${model.classFullName}, id=${model.id}, "${model.name}"`);
     const sourceDb = this.iModelExporter.sourceDb;
     // output bis:Element count
@@ -126,7 +127,7 @@ export class SummaryExporter extends IModelExportHandler {
   }
 
   /** Override of IModelExportHandler.onExportElement */
-  protected onExportElement(element: Element, isUpdate: boolean | undefined): void {
+  public override onExportElement(element: Element, isUpdate: boolean | undefined): void {
     if (!(element instanceof InformationPartitionElement)) {
       const indent = (level: number): string => {
         let indentString = "";
