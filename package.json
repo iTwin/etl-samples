@@ -27,8 +27,8 @@
     "url": "http://www.bentley.com"
   },
   "devDependencies": {
-    "@itwin/build-tools": "rc",
-    "@itwin/eslint-plugin": "rc",
+    "@itwin/build-tools": "~3.0.0",
+    "@itwin/eslint-plugin": "~3.0.0",
     "@types/chai": "^4.2.12",
     "@types/mocha": "^5.2.7",
     "chai": "^4.3.4",
@@ -40,13 +40,13 @@
   },
   "dependencies": {
     "@itwin/browser-authorization": "latest",
-    "@itwin/core-backend": "rc",
-    "@itwin/core-bentley": "rc",
-    "@itwin/core-common": "rc",
-    "@itwin/core-geometry": "rc",
-    "@itwin/core-i18n": "rc",
-    "@itwin/core-transformer": "rc",
-    "@itwin/ecschema-metadata": "rc"
+    "@itwin/core-backend": "~3.0.0",
+    "@itwin/core-bentley": "~3.0.0",
+    "@itwin/core-common": "~3.0.0",
+    "@itwin/core-geometry": "~3.0.0",
+    "@itwin/core-i18n": "~3.0.0",
+    "@itwin/core-transformer": "~3.0.0",
+    "@itwin/ecschema-metadata": "~3.0.0"
   },
   "eslintConfig": {
     "plugins": [
